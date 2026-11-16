@@ -4,6 +4,7 @@ local QQ = ns.QQ
 local floor, ceil, max, min, sqrt = math.floor, math.ceil, math.max, math.min, math.sqrt
 local format = string.format
 local pairs, ipairs, type, tostring, tonumber = pairs, ipairs, type, tostring, tonumber
+local say = ns.say
 local NEAR_ADD = ns.NEAR_ADD
 local NEAR_ONLY = ns.NEAR_ONLY
 local OBJECTIVE_TYPES = ns.OBJECTIVE_TYPES
@@ -319,9 +320,31 @@ local function scanManual()
     end
 end
 
+-- Questie asks at the start which objective style to use. With the Blizzard style Questie draws no objectives,
+-- so there is nothing for the blobs to work with: say so once.
+local styleWarned = false
+function ns.objectiveStyle()
+    local p = Questie and Questie.db and Questie.db.profile
+    if not p then return nil end
+    if p.enableObjectives == false then return "blizzard" end
+    return p.iconTheme or "questie"
+end
+
+local function checkStyle()
+    if ns.objectiveStyle() == "blizzard" then
+        if not styleWarned then
+            styleWarned = true
+            say("Questie is set to the Blizzard objective style, so Questie draws no objectives and there are no blobs to show. Choose the Questie or pfQuest style in Questie's icon options.")
+        end
+    else
+        styleWarned = false
+    end
+end
+
 function QQ:Scan()
     if QQ.SyncMini then QQ:SyncMini() end
     if not (ns.HBD and ns.QuestieMap and ns.QuestieMap.questIdFrames and Questie and Questie.db) then return end
+    checkStyle()
     if not ns.DB.enabled then
         restoreAll()
         return

@@ -37,5 +37,6 @@ Requires Questie. Copy the `BlobsForQuestie` folder into `World of Warcraft/<ver
 
 ## Notes
 
+- Questie asks at the start which objective style to use. Blobs for Questie works with the Questie and pfQuest styles. With the Blizzard style Questie draws no objectives, so there is nothing to show; the addon tells you in chat. You can change the style later in Questie's icon options.
 - Blizzard's own map pins (not drawn by Questie) cannot be hidden by this addon.
 - If something looks wrong, `/blob off` brings Questie back to normal at once.

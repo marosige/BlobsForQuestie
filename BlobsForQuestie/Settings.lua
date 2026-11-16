@@ -456,18 +456,13 @@ local function buildGUI()
         "Shows Questie's icons instead of blobs near your character.")
     plainCheck(-PH - 86, "showNearMouse", "Around the mouse",
         "Shows Questie's icons instead of blobs around the mouse pointer.", function() if QQ.ClearCursor then QQ:ClearCursor() end end)
-    -- one radius and one blob strength for all three
-    local sRad = makeSlider(p, X + 28, -PH - 108, HALF, "Radius",
+    -- one radius for the character and the mouse
+    local sRad = makeSlider(p, X + 28, -PH - 108, CW - 28, "Radius",
         "Distance around your character and around the mouse, in percent of the map width.", 1, 40, 1,
         function(v) return format("%d%%", v) end,
         function() return ns.DB.objPlayer end, function(v) ns.DB.objPlayer = v; ns.DB.objMouse = v end)
-    local sBlob = makeSlider(p, X + 28 + HALF + 24, -PH - 108, HALF, "Blob under the icons",
-        "How strongly a blob stays behind the shown icons. None: the blob opens up completely.", 0, 100, 5,
-        function(v) if v == 0 then return "none" end return format("%d%%", v) end,
-        function() return ns.DB.playerOpacity end, function(v) ns.DB.playerOpacity = v; ns.DB.mouseOpacity = v; ns.DB.allOpacity = v end)
     widgets[#widgets + 1] = function()
         setActive(sRad, (ns.DB.showNearPlayer or ns.DB.showNearMouse) and not ns.DB.revealAll and true or false)
-        setActive(sBlob, (ns.DB.showNearPlayer or ns.DB.showNearMouse or ns.DB.revealAll) and true or false)
     end
 
     -- two columns: what to hide, and what happens when you point at something

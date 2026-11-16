@@ -39,6 +39,9 @@ function ns.debugReport()
     end
     line("Questie: " .. (Questie and (qv or "found") or "NOT found") .. (Questie and Questie.IsForever and "  (Forever)" or ""))
     line("HereBeDragons: " .. (ns.HBD and (ns.hbdSource or "found") or "NOT found"))
+    local st0 = ns.objectiveStyle and ns.objectiveStyle()
+    local styles = { questie = "Questie", pfquest = "pfQuest", blizzard = "Blizzard (Questie draws no objectives: nothing to show!)", custom = "custom" }
+    line("Questie objective style: " .. (st0 and (styles[st0] or st0) or "unknown"))
     local frames, mini = 0, 0
     if ns.QuestieMap and ns.QuestieMap.questIdFrames then
         for _, names in pairs(ns.QuestieMap.questIdFrames) do

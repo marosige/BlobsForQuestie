@@ -21,22 +21,22 @@ local pairs, ipairs, type, tostring, tonumber = pairs, ipairs, type, tostring, t
 
 local DEFAULTS = {
     enabled = true,
-    showPanel = false,     -- the small quick-toggle panel
+    showPanel = true,      -- the map buttons
     revealAll = false,     -- show the plain Questie icons everywhere (the near settings do not matter then)
-    allOpacity = 0,       -- % of the blob strength kept under them
+    allOpacity = 100,      -- % of the blob strength kept under the icons (fixed: the blob stays)
     showNearPlayer = true, -- show the plain Questie icons near the character (instead of a blob)
-    objPlayer = 12,        -- % of the map width around the character
-    playerOpacity = 0,     -- % of the blob strength kept under those icons (0 = no blob there)
+    objPlayer = 10,        -- % of the map width around the character
+    playerOpacity = 100,   -- % of the blob strength kept under those icons
     showNearMouse = true,  -- ... and around the mouse cursor on the map
-    objMouse = 12,         -- % of the map width around the mouse cursor
-    mouseOpacity = 0,      -- % of the blob strength kept under those icons
+    objMouse = 10,         -- % of the map width around the mouse cursor
+    mouseOpacity = 100,    -- % of the blob strength kept under those icons
     hoverShow = true,      -- pointing at an icon: that objective shows its icons in every blob
     shiftFocus = true,     -- Shift while pointing (icon on the map, quest in the log): only that objective / quest shows
     logDetails = true,     -- a quest's details open in the quest log: only that quest shows on the map
     panelCollapsed = false, -- the map buttons are folded to the arrow and the addon switch
     hideFarAvail = false,  -- available quests follow the same rules as objectives; off = always shown
     blobAlpha = 0.30,      -- strength of the blobs
-    hideItemStarts = true,  -- hide the available quests that start from an item dropped by a monster or object
+    hideItemStarts = false, -- hide the available quests that start from an item dropped by a monster or object
     hidePvPQuests = false, -- hide the available PvP quests
     hideRepeatable = false, -- hide the available repeatable quests
     hideDungeonAvail = false, -- hide the available dungeon and raid quests
@@ -44,7 +44,7 @@ local DEFAULTS = {
     blobsWorld = true,     -- blobs on the continent / world maps
     minimapBlobs = false,  -- the same rules (and blobs) on the minimap
     groupMode = "all",     -- "quest" (one blob per quest objective), "all" (one unified blob) or "color" (one unified blob per color)
-    colorMode = "single",  -- blob colour: "single" (one colour), "level" (heat map of the quest levels) or "kind" (kill / loot / other)
+    colorMode = "level",   -- blob colour: "single" (one colour), "level" (heat map of the quest levels) or "kind" (kill / loot / other)
     lootByDrop = true,     -- "kind" colours: loot changes to its low-rate color where the drop rate is low
     colorAll = { 0.10, 0.28, 0.70 },   -- the "single" colour (dark blue, like the game's own quest blobs)
     -- the "kind" colours; loot has three by drop rate: loot = good (80% and up), lootMid, lootLow = poor (under 30%)
@@ -126,7 +126,8 @@ local function initDB()
     ns.DB.playerOpacity = min(max(ns.DB.playerOpacity, 0), 100)
     ns.DB.allOpacity = min(max(ns.DB.allOpacity, 0), 100)
     ns.DB.mouseOpacity = min(max(ns.DB.mouseOpacity, 0), 100)
-    ns.DB.objMouse, ns.DB.mouseOpacity, ns.DB.allOpacity = ns.DB.objPlayer, ns.DB.playerOpacity, ns.DB.playerOpacity   -- one radius and one blob strength
+    ns.DB.objMouse = ns.DB.objPlayer                                           -- one radius for the character and the mouse
+    ns.DB.playerOpacity, ns.DB.mouseOpacity, ns.DB.allOpacity = 100, 100, 100   -- the blob always stays under the icons
     ns.DB.blobAlpha = min(max(ns.DB.blobAlpha, 0.1), 0.8)
     if type(ns.DB.minimap) ~= "table" then ns.DB.minimap = { hide = false, minimapPos = 215 } end
 end
