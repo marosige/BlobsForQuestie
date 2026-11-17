@@ -76,19 +76,31 @@ function ns.debugReport()
                     local f = _G[name]
                     if f and f.data and not f.miniMapIcon and f.UiMapID and f.UiMapID ~= view then
                         local e = per[f.UiMapID]
-                        if not e then e = { n = 0, hid = 0 }; per[f.UiMapID] = e; order[#order + 1] = f.UiMapID end
+                        if not e then e = { n = 0, hid = 0, types = {} }; per[f.UiMapID] = e; order[#order + 1] = f.UiMapID end
                         e.n = e.n + 1
                         if f.hidden or f._qqHid then e.hid = e.hid + 1 end
+                        local t = tostring(f.data.Type)
+                        e.types[t] = (e.types[t] or 0) + 1
                     end
                 end
             end
         end
         table.sort(order)
-        for i, id in ipairs(order) do
-            if i > 8 then line("... and " .. (#order - 8) .. " more maps"); break end
+        local parts = {}
+        for _, id in ipairs(order) do
             local e = per[id]
-            line("icons of map " .. mapName(id) .. ": " .. e.n .. ", hidden " .. e.hid .. ", inside the viewed map: " .. (ns.insideView(id) and "yes" or "no"))
+            local ts = {}
+            for t, n in pairs(e.types) do ts[#ts + 1] = t .. " " .. n end
+            table.sort(ts)
+            local ok, info = pcall(C_Map.GetMapInfo, id)
+            local nm = ok and type(info) == "table" and tostring(info.name) or "?"
+            local par = ok and type(info) == "table" and tostring(info.parentMapID) or "?"
+            parts[#parts + 1] = id .. " " .. nm .. " (parent " .. par .. "): " .. e.hid .. "/" .. e.n .. " hidden, "
+                .. (ns.insideView(id) and "INSIDE" or "outside") .. " [" .. table.concat(ts, ", ") .. "]"
         end
+        -- the city / inside maps first, the rest after
+        table.sort(parts, function(x, y) return (x:find("INSIDE", 1, true) and 0 or 1) < (y:find("INSIDE", 1, true) and 0 or 1) end)
+        for _, l in ipairs(parts) do line("other map " .. l) end
     end
     local st = QQ.stats
     if st then
