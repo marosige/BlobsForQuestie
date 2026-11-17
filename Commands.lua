@@ -60,6 +60,36 @@ function ns.debugReport()
     local DB = ns.DB or {}
     line("settings: addon " .. (DB.enabled and "on" or "off") .. ", color " .. tostring(DB.colorMode) .. ", grouping " .. tostring(DB.groupMode)
         .. ", minimap blobs " .. (DB.minimapBlobs and "on" or "off") .. ", map buttons " .. (DB.showPanel and "on" or "off"))
+    -- icons that belong to other maps than the viewed one (a city inside a zone, neighbouring zones)
+    local view = ns.S and ns.S.viewMap
+    if view and ns.QuestieMap and C_Map and C_Map.GetMapInfo then
+        local function mapName(id)
+            local ok, info = pcall(C_Map.GetMapInfo, id)
+            if ok and type(info) == "table" then return tostring(id) .. " " .. tostring(info.name) .. ", parent " .. tostring(info.parentMapID) end
+            return tostring(id)
+        end
+        line("viewed map: " .. mapName(view))
+        local per, order = {}, {}
+        for _, group in ipairs({ ns.QuestieMap.questIdFrames or {}, ns.QuestieMap.manualFrames or {} }) do
+            for _, names in pairs(group) do
+                for _, name in pairs(names) do
+                    local f = _G[name]
+                    if f and f.data and not f.miniMapIcon and f.UiMapID and f.UiMapID ~= view then
+                        local e = per[f.UiMapID]
+                        if not e then e = { n = 0, hid = 0 }; per[f.UiMapID] = e; order[#order + 1] = f.UiMapID end
+                        e.n = e.n + 1
+                        if f.hidden or f._qqHid then e.hid = e.hid + 1 end
+                    end
+                end
+            end
+        end
+        table.sort(order)
+        for i, id in ipairs(order) do
+            if i > 8 then line("... and " .. (#order - 8) .. " more maps"); break end
+            local e = per[id]
+            line("icons of map " .. mapName(id) .. ": " .. e.n .. ", hidden " .. e.hid .. ", inside the viewed map: " .. (ns.insideView(id) and "yes" or "no"))
+        end
+    end
     local st = QQ.stats
     if st then
         line("last map scan: " .. (st.ms and format("%.1f ms", st.ms) or "?") .. ", " .. st.blobs .. " blobs, "
