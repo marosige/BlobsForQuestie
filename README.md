@@ -12,7 +12,7 @@ A companion addon for **Questie** that declutters the map. It never changes Ques
 - **Minimap:** optional blobs on the minimap too.
 - **Available quests:** show them everywhere or only nearby, leave out quests started by a dropped item, PvP, repeatable and dungeon quests, and color the ! by difficulty.
 - **Filters:** hide the icons of neighbouring zones and of dungeon quests that Questie draws at dungeon entrances.
-- **Mouse over:** point at a Questie icon to see that objective in every blob. Hold Shift to show only it, with no other icons, quest givers or turn-ins. The same works in the quest log: hold Shift and point at a quest to show only its icons on the map. Opening a quest's details does the same. All three can be switched on the Questie icons tab. Blobs always stay.
+- **Mouse over:** point at a Questie icon to see that objective in every blob. Hold Shift to show only it, with no other icons, quest givers or turn-ins. The same works in the quest log: hold Shift and point at a quest to show only its icons on the map. Opening a quest's details does the same, and Shift then shows everything again. Shift + click on an icon opens that quest's details. All three can be switched on the Questie icons tab. Blobs always stay.
 
 ## Install
 
@@ -37,5 +37,6 @@ Requires Questie. Copy the `BlobsForQuestie` folder into `World of Warcraft/<ver
 
 ## Notes
 
+- Questie asks at the start which objective style to use. Blobs for Questie works with the Questie and pfQuest styles. With the Blizzard style Questie draws no objectives, so there is nothing to show; the addon tells you in chat. You can change the style later in Questie's icon options.
 - Blizzard's own map pins (not drawn by Questie) cannot be hidden by this addon.
 - If something looks wrong, `/blob off` brings Questie back to normal at once.
