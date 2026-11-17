@@ -78,6 +78,7 @@ function ns.debugReport()
                         local e = per[f.UiMapID]
                         if not e then e = { n = 0, hid = 0, types = {} }; per[f.UiMapID] = e; order[#order + 1] = f.UiMapID end
                         e.n = e.n + 1
+                        if ns.insideView(f) then e.inside = (e.inside or 0) + 1 end
                         if f.hidden or f._qqHid then e.hid = e.hid + 1 end
                         local t = tostring(f.data.Type)
                         e.types[t] = (e.types[t] or 0) + 1
@@ -96,7 +97,7 @@ function ns.debugReport()
             local nm = ok and type(info) == "table" and tostring(info.name) or "?"
             local par = ok and type(info) == "table" and tostring(info.parentMapID) or "?"
             parts[#parts + 1] = id .. " " .. nm .. " (parent " .. par .. "): " .. e.hid .. "/" .. e.n .. " hidden, "
-                .. (ns.insideView(id) and "INSIDE" or "outside") .. " [" .. table.concat(ts, ", ") .. "]"
+                .. ((e.inside or 0) > 0 and ("INSIDE " .. e.inside) or "outside") .. " [" .. table.concat(ts, ", ") .. "]"
         end
         -- the city / inside maps first, the rest after
         table.sort(parts, function(x, y) return (x:find("INSIDE", 1, true) and 0 or 1) < (y:find("INSIDE", 1, true) and 0 or 1) end)

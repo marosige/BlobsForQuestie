@@ -421,27 +421,26 @@ local function focusHide(f)
     return true
 end
 
--- A map that lies inside the viewed one (Thunder Bluff inside Mulgore) is not a neighbouring zone: its icons stay.
-local insideCache = {}
-function ns.insideView(map)
+-- An icon of another map that lies inside the viewed one (Thunder Bluff inside Mulgore) is not from a neighbouring
+-- zone and stays. Blizzard lists such a city beside the zone, not under it, so the test is by position: does the
+-- icon's place in the world fall on the viewed map?
+function ns.insideView(f)
     local v = S.viewMap
+    local map = f and f.UiMapID
     if not map or not v then return false end
     if map == v then return true end
-    local key = v .. ">" .. map
-    local r = insideCache[key]
-    if r == nil then
-        r = false
-        if C_Map and C_Map.GetMapInfo then
-            local id = map
-            for _ = 1, 8 do
-                local ok, info = pcall(C_Map.GetMapInfo, id)
-                id = ok and type(info) == "table" and info.parentMapID or nil
-                if not id or id == 0 then break end
-                if id == v then r = true; break end
-            end
+    local c = f._qqIn
+    if c and c.v == v and c.x == f.x and c.y == f.y and c.m == map then return c.r end
+    local r = false
+    local H = ns.HBD
+    if H and H.GetWorldCoordinatesFromZone and H.GetZoneCoordinatesFromWorld and f.x and f.y then
+        local ok, wx, wy = pcall(H.GetWorldCoordinatesFromZone, H, f.x / 100, f.y / 100, map)
+        if ok and type(wx) == "number" and type(wy) == "number" then
+            local ok2, zx, zy = pcall(H.GetZoneCoordinatesFromWorld, H, wx, wy, v)
+            r = ok2 and type(zx) == "number" and type(zy) == "number" and zx >= 0 and zx <= 1 and zy >= 0 and zy <= 1 or false
         end
-        insideCache[key] = r
     end
+    f._qqIn = { v = v, x = f.x, y = f.y, m = map, r = r }
     return r
 end
 
@@ -450,7 +449,7 @@ local function wantHide(f)
     local d = f.data
     if not d then return false end
     if not f.miniMapIcon and focusHide(f) then return true end
-    if ns.DB.hideOtherZones and not S.continent and S.viewMap and not ns.insideView(f.UiMapID) then return true end
+    if ns.DB.hideOtherZones and not S.continent and S.viewMap and not ns.insideView(f) then return true end
     if dungeonHide(f) then return true end
     if d.Type == "available" then return availHide(f) end
     if OBJECTIVE_TYPES[d.Type] then
