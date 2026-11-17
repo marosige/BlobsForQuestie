@@ -104,7 +104,7 @@ local function scanZone()
         tintAvail(f, plevel)
         local t = d.Type
         local other = f.UiMapID ~= S.viewMap
-        if other and ns.DB.hideOtherZones then
+        if other and ns.DB.hideOtherZones and not ns.insideView(f.UiMapID) then
             -- Questie also draws neighbouring zones on a zone map: that is only noise here
             f._qqHide = true
             applyHide(f, true, true)
@@ -308,7 +308,7 @@ local function scanManual()
         for _, name in pairs(names) do
             local f = _G[name]
             if f and f.data and not f.miniMapIcon and f.UiMapID and f.FakeHide then
-                if want0 and f.UiMapID ~= S.viewMap then
+                if want0 and not ns.insideView(f.UiMapID) then
                     f._qqHide = true
                     applyHide(f, true, true)
                 elseif f._qqHid then

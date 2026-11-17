@@ -475,7 +475,7 @@ local function buildGUI()
     end
     makeHeader(p, X, -PH - 156, "Hide Questie icons", COLW)
     colCheck(X, -PH - 178, "hideOtherZones", "From neighbouring zones",
-        "Zone maps show only the icons of that zone, not those of the zones around it.")
+        "Zone maps show only the icons of that zone, not those of the zones around it. Cities and areas inside the zone (such as Thunder Bluff in Mulgore) stay.")
     colCheck(X, -PH - 214, "hideDungeonQuests", "Of dungeon quests on outdoor maps",
         "Hides the icons Questie draws at a dungeon entrance for quests that happen inside the dungeon.")
 

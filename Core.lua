@@ -421,12 +421,36 @@ local function focusHide(f)
     return true
 end
 
+-- A map that lies inside the viewed one (Thunder Bluff inside Mulgore) is not a neighbouring zone: its icons stay.
+local insideCache = {}
+function ns.insideView(map)
+    local v = S.viewMap
+    if not map or not v then return false end
+    if map == v then return true end
+    local key = v .. ">" .. map
+    local r = insideCache[key]
+    if r == nil then
+        r = false
+        if C_Map and C_Map.GetMapInfo then
+            local id = map
+            for _ = 1, 8 do
+                local ok, info = pcall(C_Map.GetMapInfo, id)
+                id = ok and type(info) == "table" and info.parentMapID or nil
+                if not id or id == 0 then break end
+                if id == v then r = true; break end
+            end
+        end
+        insideCache[key] = r
+    end
+    return r
+end
+
 -- what the hooks use between two scans
 local function wantHide(f)
     local d = f.data
     if not d then return false end
     if not f.miniMapIcon and focusHide(f) then return true end
-    if ns.DB.hideOtherZones and not S.continent and S.viewMap and f.UiMapID ~= S.viewMap then return true end
+    if ns.DB.hideOtherZones and not S.continent and S.viewMap and not ns.insideView(f.UiMapID) then return true end
     if dungeonHide(f) then return true end
     if d.Type == "available" then return availHide(f) end
     if OBJECTIVE_TYPES[d.Type] then
