@@ -489,6 +489,18 @@ local function hookFrame(f)
         if ns.DB and ns.DB.enabled and S.viewMap then return wantHide(self) and true or false end
         return false
     end
+    -- Shift + click on an objective / turn-in icon: open that quest's details in the quest log.
+    if f.HookScript and f.GetScript and f:GetScript("OnClick") then
+        f:HookScript("OnClick", function(self, button)
+            local d = self.data
+            if button ~= "LeftButton" or self.miniMapIcon or type(d) ~= "table" or type(d.Id) ~= "number" then return end
+            if not (ns.DB and ns.DB.enabled and ns.DB.shiftFocus and IsShiftKeyDown and IsShiftKeyDown()) then return end
+            if d.Type == "available" or d.Type == "manual" or not d.QuestData then return end
+            if ChatEdit_GetActiveWindow and ChatEdit_GetActiveWindow() then return end   -- Questie links the quest there
+            if InCombatLockdown and InCombatLockdown() then return end
+            if QuestMapFrame_OpenToQuestDetails then pcall(QuestMapFrame_OpenToQuestDetails, d.Id) end
+        end)
+    end
     -- If Questie / HereBeDragons shows an icon we want hidden, hide it again right away.
     f:HookScript("OnShow", function(self)
         if self._qqAlpha ~= nil then self:SetAlpha(0) end
