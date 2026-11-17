@@ -12,7 +12,7 @@ A companion addon for **Questie** that declutters the map. It never changes Ques
 - **Minimap:** optional blobs on the minimap too.
 - **Available quests:** show them everywhere or only nearby, leave out quests started by a dropped item, PvP, repeatable and dungeon quests, and color the ! by difficulty.
 - **Filters:** hide the icons of neighbouring zones and of dungeon quests that Questie draws at dungeon entrances.
-- **Mouse over:** point at a Questie icon to see that objective in every blob. Hold Shift to show only it, with no other icons, quest givers or turn-ins. The same works in the quest log: hold Shift and point at a quest to show only its icons on the map. Opening a quest's details does the same. Shift + click on an icon opens that quest's details. All three can be switched on the Questie icons tab. Blobs always stay.
+- **Mouse over:** point at a Questie icon to see that objective in every blob. Hold Shift to show only it, with no other icons, quest givers or turn-ins. The same works in the quest log: hold Shift and point at a quest to show only its icons on the map. Opening a quest's details does the same, and Shift then shows everything again. Shift + click on an icon opens that quest's details. All three can be switched on the Questie icons tab. Blobs always stay.
 
 ## Install
 

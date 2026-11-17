@@ -485,7 +485,7 @@ local function buildGUI()
     colCheck(X2, -PH - 214, "shiftFocus", "Hold Shift over an objective or quest to hide the rest",
         "Hold Shift while pointing at a Questie icon on the map or at a quest in the quest log: only that objective or quest keeps its icons. All other icons, quest givers and turn-ins hide. Blobs always stay. Shift + click on an icon opens that quest's details in the quest log.", function() if QQ.ClearCursor then QQ:ClearCursor() end end)
     colCheck(X2, -PH - 250, "logDetails", "Show only a quest's objectives while its details are open",
-        "Shows only that quest's icons on the map as long as its details are open in the quest log.")
+        "Shows only that quest's icons on the map as long as its details are open in the quest log. Hold Shift to show everything again.")
 
     -- 3: Available quests -------------------------------------------------------------------
     p = pages[3]

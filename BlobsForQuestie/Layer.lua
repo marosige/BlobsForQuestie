@@ -545,6 +545,8 @@ local function questLogFocus()
         end
     end
     if ns.DB.logDetails then
+        -- Shift inverts the filter: while it is held, an open quest's details do not hide anything
+        if ns.DB.shiftFocus and IsShiftKeyDown and IsShiftKeyDown() then return false end
         local df = QuestMapFrame.DetailsFrame
         if type(df) == "table" and df.IsShown and df:IsShown() then
             local id
@@ -567,7 +569,9 @@ function QQ:HoverTick(f, elapsed)
 
     -- the quest log has gaps between its rows: keep the last quest for a moment so the map does not flip back and forth
     local qf = questLogFocus()
-    if qf then
+    if qf == false then
+        qf = nil; f._qfLast = nil   -- Shift over open details: show everything right away
+    elseif qf then
         f._qfLast, f._qfT = qf, now
     elseif f._qfLast and now - (f._qfT or 0) < 0.3 then
         qf = f._qfLast
