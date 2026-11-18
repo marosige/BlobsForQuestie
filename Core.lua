@@ -433,7 +433,15 @@ function ns.insideView(f)
     if c and c.v == v and c.x == f.x and c.y == f.y and c.m == map then return c.r end
     local r = false
     local H = ns.HBD
-    if H and H.GetWorldCoordinatesFromZone and H.GetZoneCoordinatesFromWorld and f.x and f.y then
+    -- only a small map can be a city inside the zone; a zone of its own size or bigger (the Barrens next to Mulgore,
+    -- whose map picture also shows some of it) is a neighbour even if the icon falls on the viewed picture
+    local small = false
+    if H and H.GetZoneSize then
+        local ok, mw, mh = pcall(H.GetZoneSize, H, map)
+        local ok2, vw, vh = pcall(H.GetZoneSize, H, v)
+        small = ok and ok2 and type(mw) == "number" and type(vw) == "number" and vw > 0 and mw < vw * 0.5
+    end
+    if small and H.GetWorldCoordinatesFromZone and H.GetZoneCoordinatesFromWorld and f.x and f.y then
         local ok, wx, wy = pcall(H.GetWorldCoordinatesFromZone, H, f.x / 100, f.y / 100, map)
         if ok and type(wx) == "number" and type(wy) == "number" then
             local ok2, zx, zy = pcall(H.GetZoneCoordinatesFromWorld, H, wx, wy, v)
