@@ -421,35 +421,24 @@ local function focusHide(f)
     return true
 end
 
--- An icon of another map that lies inside the viewed one (Thunder Bluff inside Mulgore) is not from a neighbouring
--- zone and stays. Blizzard lists such a city beside the zone, not under it, so the test is by position: does the
--- icon's place in the world fall on the viewed map?
+-- Cities lie beside their zone in Blizzard's map tree, so they are listed by hand: city map -> the zone map where
+-- its icons stay visible. Every other map is a neighbouring zone.
+local CITY_IN = {
+    [1453] = 1429,   -- Stormwind City     in Elwynn Forest
+    [1455] = 1426,   -- Ironforge          in Dun Morogh
+    [1457] = 1438,   -- Darnassus          in Teldrassil
+    [1454] = 1411,   -- Orgrimmar          in Durotar
+    [1456] = 1412,   -- Thunder Bluff      in Mulgore
+    [1458] = 1420,   -- Undercity          in Tirisfal Glades
+    [1954] = 1941,   -- Silvermoon City    in Eversong Woods
+    [1947] = 1943,   -- The Exodar         in Azuremyst Isle
+}
+ns.CITY_IN = CITY_IN
 function ns.insideView(f)
     local v = S.viewMap
     local map = f and f.UiMapID
     if not map or not v then return false end
-    if map == v then return true end
-    local c = f._qqIn
-    if c and c.v == v and c.x == f.x and c.y == f.y and c.m == map then return c.r end
-    local r = false
-    local H = ns.HBD
-    -- only a small map can be a city inside the zone; a zone of its own size or bigger (the Barrens next to Mulgore,
-    -- whose map picture also shows some of it) is a neighbour even if the icon falls on the viewed picture
-    local small = false
-    if H and H.GetZoneSize then
-        local ok, mw, mh = pcall(H.GetZoneSize, H, map)
-        local ok2, vw, vh = pcall(H.GetZoneSize, H, v)
-        small = ok and ok2 and type(mw) == "number" and type(vw) == "number" and vw > 0 and mw < vw * 0.5
-    end
-    if small and H.GetWorldCoordinatesFromZone and H.GetZoneCoordinatesFromWorld and f.x and f.y then
-        local ok, wx, wy = pcall(H.GetWorldCoordinatesFromZone, H, f.x / 100, f.y / 100, map)
-        if ok and type(wx) == "number" and type(wy) == "number" then
-            local ok2, zx, zy = pcall(H.GetZoneCoordinatesFromWorld, H, wx, wy, v)
-            r = ok2 and type(zx) == "number" and type(zy) == "number" and zx >= 0 and zx <= 1 and zy >= 0 and zy <= 1 or false
-        end
-    end
-    f._qqIn = { v = v, x = f.x, y = f.y, m = map, r = r }
-    return r
+    return map == v or CITY_IN[map] == v
 end
 
 -- what the hooks use between two scans
