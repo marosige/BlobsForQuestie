@@ -77,7 +77,7 @@ local function buildGUI()
     local close = CreateFrame("Button", nil, f, "UIPanelCloseButton")
     close:SetPoint("TOPRIGHT", 2, 2)
     local sw = makeSwitch(f, function() return ns.DB.enabled end, function(v) ns.DB.enabled = v end,
-        "Turns the addon on or off. Off: Questie's map as usual.")
+        "Turns Blobs for Questie on or off. When it is off, the map looks exactly as Questie draws it.")
     sw:SetPoint("TOPRIGHT", -40, -17)
 
     -- tabs: three equal boxes; the chosen one opens into the framed panel below it ----------------
@@ -287,16 +287,16 @@ local function buildGUI()
         end
     end
 
-    makeSlider(p, X + 4, -PH - 12, CW - 8, "Strength",
-        "How strongly the blobs show.",
+    makeSlider(p, X + 4, -PH - 12, CW - 8, "Blob strength",
+        "How strongly the blobs are drawn. Lower values let more of the map show through.",
         0.10, 0.80, 0.02, function(v) return format("%d%%", floor(v * 100 + 0.5)) end,
         function() return ns.DB.blobAlpha end, function(v) ns.DB.blobAlpha = v end)
 
-    makeHeader(p, X, -PH - 70, "Color")
+    makeHeader(p, X, -PH - 70, "Blob color")
     makeSegmented(p, X, -PH - 92, CW, {
-        { "level", "By quest level", "Like quest titles: grey (easy) to red (hard)." },
-        { "single", "One color", "Every blob in one color." },
-        { "kind", "By objective", "Kill, loot and other objectives in colors of their own." },
+        { "level", "By quest level", "Each blob takes the color of its quest's difficulty, like quest titles in the game: grey is easy, red is very hard." },
+        { "single", "One color", "All blobs are drawn in one color of your choice." },
+        { "kind", "By objective", "Each kind of objective has its own color: kill, loot and everything else. Loot can also show its drop rate." },
     }, function() return ns.DB.colorMode end, function(v) ns.DB.colorMode = v; redraw() end)
 
     -- the colour pickers of the selected mode
@@ -322,15 +322,15 @@ local function buildGUI()
         local sw = makeSwatch(rowKind, x0 + 70, -1, key, ({ "Kill", "Loot", "Other" })[i])
         if i == 2 then lootEntry[#lootEntry + 1] = fs; lootEntry[#lootEntry + 1] = sw end
     end
-    local rowLevel = makeHint(p, X + 4, rowY - 3, "Like quest titles in the game.")
+    local rowLevel = makeHint(p, X + 4, rowY - 3, "The colors of quest titles in the game: grey (easy) to red (very hard).")
     widgets[#widgets + 1] = function()
         rowSingle:SetShown(ns.DB.colorMode == "single")
         rowKind:SetShown(ns.DB.colorMode == "kind")
         rowLevel:SetShown(ns.DB.colorMode == "level")
     end
 
-    local ldrop = check(p, -PH - 150, "lootByDrop", "Loot by drop rate",
-        "Loot shows how often the item drops: good (80% and up), mid (30-80%), poor (under 30%). The colors are on the right.", redraw)
+    local ldrop = check(p, -PH - 150, "lootByDrop", "Color loot by drop rate",
+        "Loot objectives show how likely the item is to drop: good (80% and up), mid (30-80%) or poor (under 30%). Choose the three colors on the right.", redraw)
     local dropHold = CreateFrame("Frame", nil, p)
     dropHold:SetPoint("TOPLEFT", X, 0); dropHold:SetSize(CW, 1)
     for i, r in ipairs({ { "loot", "good", "80% and up" }, { "lootMid", "mid", "30-80%" }, { "lootLow", "poor", "under 30%" } }) do
@@ -346,16 +346,17 @@ local function buildGUI()
         for _, w in ipairs(lootEntry) do w:SetShown(ns.DB.colorMode == "kind" and not on) end   -- the three colors below replace it
     end
 
-    makeHeader(p, X, -PH - 192, "Grouping")
+    makeHeader(p, X, -PH - 192, "Blob grouping")
     makeSegmented(p, X, -PH - 214, CW, {
-        { "quest", "One blob per quest", "Every objective its own blob, even where they overlap." },
-        { "all", "Unified", "Objectives close together share one blob; each part keeps its color." },
-        { "color", "Unified by color", "One blob per color: per difficulty, or per objective type." },
+        { "quest", "One blob per quest", "Every quest objective gets a blob of its own. Where objectives are close, their blobs overlap." },
+        { "all", "Unified", "Objectives close to each other share one blob. Each part of it keeps its own color, blending into the next." },
+        { "color", "Unified by color", "Objectives of the same color share one blob, so every color forms blobs of its own." },
     }, function() return ns.DB.groupMode end, function(v) ns.DB.groupMode = v end)
-    check(p, -PH - 252, "blobsWorld", "Blobs on continent and world maps",
-        "One blob per zone. Off: no blobs there.", redraw)
-    check(p, -PH - 278, "minimapBlobs", "Blobs on the minimap",
-        "Far objectives become blobs on the minimap too. Off: the minimap as Questie draws it.")
+    makeHeader(p, X, -PH - 264, "Other maps")
+    check(p, -PH - 286, "blobsWorld", "Blobs on continent and world maps",
+        "Shows one blob for each zone on the continent and world maps. When off, these maps show no blobs.", redraw)
+    check(p, -PH - 312, "minimapBlobs", "Blobs on the minimap",
+        "Far objectives on the minimap become blobs too, with the same colors and grouping. When off, the minimap looks as Questie draws it.")
 
     local DEMO_SCALE = 2.4   -- demo strips: pixels per percent of the map width
 
@@ -418,10 +419,10 @@ local function buildGUI()
                 end
             end
         end
-        scene(CW * 0.25, "player.png", "showNearPlayer", "objPlayer", "near you")
-        scene(CW * 0.75, "cursor.png", "showNearMouse", "objMouse", "near the mouse")
+        scene(CW * 0.25, "player.png", "showNearPlayer", "objPlayer", "around your character")
+        scene(CW * 0.75, "cursor.png", "showNearMouse", "objMouse", "around the mouse pointer")
     end
-    makeHeader(p, X, -PH - 20, "Show Questie's icons")
+    makeHeader(p, X, -PH - 20, "Show Questie's icons instead of blobs")
     local HALF = floor((CW - 28 - 24) / 2)
     -- w: width of the label (and of the clickable area right of the box)
     local function plainCheck(y, key, label, tip, after, w)
@@ -433,15 +434,15 @@ local function buildGUI()
         return cb
     end
     plainCheck(-PH - 42, "revealAll", "Everywhere",
-        "Every Questie icon shows; the blobs stay under them.")
+        "Questie's icons show all over the map. The blobs stay underneath them.")
     -- each of the two has its own radius, in line with its checkbox
     local SLX = X + 196
     local SLW = CW - 196 - 52
     local LW = SLX - X - 24 - 6   -- the checkbox (and its label) ends before the slider, or it takes the slider's clicks
-    local cbP = plainCheck(-PH - 68, "showNearPlayer", "Near you",
-        "Questie's icons within the radius around your character.", nil, LW)
-    local cbM = plainCheck(-PH - 94, "showNearMouse", "Near the mouse",
-        "Questie's icons within the radius around the mouse pointer.", function() if QQ.ClearCursor then QQ:ClearCursor() end end, LW)
+    local cbP = plainCheck(-PH - 68, "showNearPlayer", "Near your character",
+        "Within the radius around your character you see Questie's icons; farther away, blobs.", nil, LW)
+    local cbM = plainCheck(-PH - 94, "showNearMouse", "Near the mouse pointer",
+        "Within the radius around the mouse pointer you see Questie's icons, so you can look around the map.", function() if QQ.ClearCursor then QQ:ClearCursor() end end, LW)
     local function radius(y, key, tip, flag)
         local sl = makeSlider(p, SLX, y - 6, SLW, "Radius", tip, 1, 40, 1,
             function(v) return format("%d%%", v) end,
@@ -450,24 +451,24 @@ local function buildGUI()
         widgets[#widgets + 1] = function() setActive(sl, ns.DB[flag] and not ns.DB.revealAll and true or false) end
         return sl
     end
-    radius(-PH - 68, "objPlayer", "In percent of the map width.", "showNearPlayer")
-    radius(-PH - 94, "objMouse", "In percent of the map width.", "showNearMouse")
+    radius(-PH - 68, "objPlayer", "How far from your character, in percent of the map's width.", "showNearPlayer")
+    radius(-PH - 94, "objMouse", "How far from the mouse pointer, in percent of the map's width.", "showNearMouse")
 
     -- what to hide, then what happens when you point at something
     makeHeader(p, X, -PH - 134, "On zone maps, also show")
     check(p, -PH - 156, "hideOtherZones", "Questie icons of neighbouring zones",
-        "Their quests (blobs and icons, as in your own zone) and Questie's town icons. Off: they stay empty. A city always shows in its own zone. Blizzard's own map icons are not touched.",
+        "A zone map also shows the quests of the zones around it, as blobs and icons just like your own zone, and Questie's town icons there. When off, those parts of the map stay empty. A city always shows in the zone it lies in. Blizzard's own map icons are not affected.",
         nil, nil, true)
     check(p, -PH - 182, "hideDungeonQuests", "Questie icons of dungeon quests at the entrance",
-        "The icons Questie puts at a dungeon entrance for quests inside it.", nil, nil, true)
+        "Questie draws the objectives of dungeon quests at the dungeon's entrance on the outdoor map. Turn this on to keep those icons.", nil, nil, true)
 
-    makeHeader(p, X, -PH - 222, "Mouse over")
-    check(p, -PH - 244, "hoverShow", "Point at an icon: show all its spots",
-        "Pointing at a Questie icon shows every spot of that objective.", function() if QQ.ClearCursor then QQ:ClearCursor() end end)
-    check(p, -PH - 270, "shiftFocus", "Shift: show only that quest",
-        "Hold Shift over an icon on the map or a quest in the quest log: only its icons stay, the others hide (the blobs stay). Shift + click an icon opens the quest.", function() if QQ.ClearCursor then QQ:ClearCursor() end end)
-    check(p, -PH - 296, "logDetails", "Open quest details: show only that quest",
-        "While a quest's details are open in the quest log, only its icons show. Hold Shift to see all.")
+    makeHeader(p, X, -PH - 222, "Focus on a quest")
+    check(p, -PH - 244, "hoverShow", "Pointing at an icon shows all spots of that objective",
+        "When you point at a Questie icon, every spot of the same objective shows its icon too, even far away inside the blobs.", function() if QQ.ClearCursor then QQ:ClearCursor() end end)
+    check(p, -PH - 270, "shiftFocus", "Hold Shift to show only one quest",
+        "Hold Shift while pointing at a Questie icon on the map, or at a quest in the quest log: only that quest's icons stay. All other icons, quest givers and turn-ins hide; the blobs stay. Shift + click on an icon opens the quest's details.", function() if QQ.ClearCursor then QQ:ClearCursor() end end)
+    check(p, -PH - 296, "logDetails", "Show only the quest whose details are open",
+        "While a quest's details are open in the quest log, the map shows only that quest's icons. Hold Shift to see all icons again.")
 
     -- 3: Available quests -------------------------------------------------------------------
     p = pages[3]
@@ -573,30 +574,30 @@ local function buildGUI()
             end
         end
     end
-    makeHeader(p, X, -PH - 20, "Show")
+    makeHeader(p, X, -PH - 20, "Show available quests")
     makeSegmented(p, X, -PH - 42, CW, {
-        { false, "All", "Every available quest, on every map." },
-        { true, "Only nearby", "Only near you or the mouse, like objectives. None on continent and world maps." },
+        { false, "Everywhere", "Every available quest shows, on every map." },
+        { true, "Only nearby", "Available quests show only near your character or the mouse pointer, like objectives (see the Questie icons tab). They are hidden on continent and world maps." },
     }, function() return ns.DB.hideFarAvail and true or false end, function(v) ns.DB.hideFarAvail = v end)
 
-    makeHeader(p, X, -PH - 92, "Include")
+    makeHeader(p, X, -PH - 92, "Include these quests")
     check(p, -PH - 114, "hideItemStarts", "Quests started by a dropped item",
-        "Started by an item from a monster or an object.", nil,
+        "Quests that start from an item a monster drops or that you find in an object.", nil,
         questieIcon(Questie and Questie.ICON_TYPE_LOOT), true)
     check(p, -PH - 140, "hidePvPQuests", "PvP quests", "Battleground and other PvP quests.", nil,
         questieIcon(Questie and Questie.ICON_TYPE_PVPQUEST) or avail, true)
-    check(p, -PH - 166, "hideRepeatable", "Repeatable quests", "Quests you can do again, like dailies.", nil,
+    check(p, -PH - 166, "hideRepeatable", "Repeatable quests", "Quests you can do again and again, such as dailies.", nil,
         questieIcon(Questie and Questie.ICON_TYPE_REPEATABLE) or avail, true)
     check(p, -PH - 192, "hideDungeonAvail", "Dungeon and raid quests",
-        "Quests done inside a dungeon or raid.", nil, avail, true)
+        "Quests that are done inside a dungeon or raid.", nil, avail, true)
 
-    makeHeader(p, X, -PH - 240, "Look")
+    makeHeader(p, X, -PH - 240, "Quest markers")
     check(p, -PH - 262, "colorAvail", "Outline the ! and ? by difficulty",
-        "A colored outline like quest titles: grey (easy) to red (hard). A green ? : turn the quest in before it goes grey.")
-    check(p, -PH - 288, "markForever", "Mark quests new in Forever",
-        "A small badge on the ! and ? of quests that are not in the original Classic.", nil, ICONS .. "forever.png")
-    check(p, -PH - 314, "markMinimap", "On the minimap too",
-        "The outline and the badge on the minimap's ! and ? as well.")
+        "The ! of an available quest and the ? of a quest to turn in get an outline in the color of the quest's title: grey (easy) to red (very hard). A green ? means: turn it in before it turns grey.")
+    check(p, -PH - 288, "markForever", "Mark quests that are new in Forever",
+        "A small teal badge on the ! and ? of quests that were not in the original Classic.", nil, ICONS .. "forever.png")
+    check(p, -PH - 314, "markMinimap", "Show these markers on the minimap too",
+        "The outline and the badge also appear on the ! and ? of the minimap.")
     -- samples: the ! in the five difficulty colors, then a turn-in ?
     local BAND_STEPS = { -99, -3, 0, 3, 5 }   -- grey, green, yellow, orange, red
     local complete = questieIcon(Questie and Questie.ICON_TYPE_COMPLETE)
@@ -617,7 +618,7 @@ local function buildGUI()
 
     -- footer ----------------------------------------------------------------------------------
     local mm = makeCheck(f, PAD - 4, -(GUI_H - 34), "Minimap button",
-        "Left-click: settings. Right-click: addon on / off.",
+        "A button on the minimap. Left-click opens these settings, right-click turns the addon on or off.",
         function() return not ns.DB.minimap.hide end,
         function(v)
             ns.DB.minimap.hide = not v
@@ -625,7 +626,7 @@ local function buildGUI()
             if icon then if v then icon:Show("BlobsForQuestie") else icon:Hide("BlobsForQuestie") end end
         end, 130)
     makeCheck(f, PAD + 126, -(GUI_H - 34), "Map buttons",
-        "A round button under Questie's on the world map, with a small bar: addon on / off, available quests, drop quests, blob color and grouping.",
+        "Adds a round button below Questie's button on the world map, with a small bar next to it: the addon on or off, all or only nearby available quests, quests started by a drop, the blob color and the grouping.",
         function() return ns.DB.showPanel end,
         function(v) ns.DB.showPanel = v; QQ:ApplyPanel() end, 110)
 
@@ -640,7 +641,7 @@ local function buildGUI()
     end
     local armed = false
     local def
-    def = button("Defaults", 78, -PAD + 4, "All settings back to their defaults. Click twice.", function()
+    def = button("Defaults", 78, -PAD + 4, "Sets every setting back to its default. Click twice to confirm.", function()
         if not armed then
             armed = true
             def:SetText("Sure?")
@@ -657,7 +658,7 @@ local function buildGUI()
         safeScan()
         QQ:RefreshGUI()
     end)
-    button("Questie options", 120, -PAD - 78, "Questie's own settings: icon theme, sizes, which quests show.", function()
+    button("Questie options", 120, -PAD - 78, "Opens Questie's own settings: icon theme, icon sizes and which quests Questie shows.", function()
         local ok, O = pcall(QuestieLoader.ImportModule, QuestieLoader, "QuestieOptions")
         if ok and O and O.ToggleConfigWindow then O:ToggleConfigWindow() end
     end)

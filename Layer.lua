@@ -395,9 +395,15 @@ end
 ---------------------------------------------------------------------------
 
 local applyFocus
-local function refocusOthers()   -- available / turn-in icons follow the focus
+local function refocusOthers()   -- available / turn-in icons and Questie's town icons follow the focus
     eachFrame(function(f, d)
         if (d.Type == "available" or d.Type == "complete") and not f.miniMapIcon then
+            local want = wantHide(f) and true or false
+            if (f._qqHid or false) ~= want then applyHide(f, want) end
+        end
+    end)
+    ns.eachManual(function(f)
+        if f.data and not f.miniMapIcon and f.UiMapID and f.FakeHide then
             local want = wantHide(f) and true or false
             if (f._qqHid or false) ~= want then applyHide(f, want) end
         end
@@ -445,6 +451,18 @@ function applyFocus(key, shift)
 end
 
 
+-- the quest whose details are open in the quest log next to the map (nil: none)
+local function openDetailsQuest()
+    if type(QuestMapFrame) ~= "table" then return nil end
+    local df = QuestMapFrame.DetailsFrame
+    if not (type(df) == "table" and df.IsShown and df:IsShown()) then return nil end
+    local id
+    if QuestMapFrame_GetFocusedQuestID then id = QuestMapFrame_GetFocusedQuestID() end
+    if (type(id) ~= "number" or id <= 0) and C_QuestLog and C_QuestLog.GetSelectedQuest then id = C_QuestLog.GetSelectedQuest() end
+    if type(id) == "number" and id > 0 then return id end
+    return nil
+end
+
 -- The quest picked in the quest log next to the map: the one pointed at, else the one whose details are open.
 local function questLogFocus()
     if not (ns.DB.shiftFocus or ns.DB.logDetails) or type(QuestMapFrame) ~= "table" then return nil end
@@ -475,15 +493,72 @@ local function questLogFocus()
     if ns.DB.logDetails then
         -- Shift inverts the filter: while it is held, an open quest's details do not hide anything
         if ns.DB.shiftFocus and IsShiftKeyDown and IsShiftKeyDown() then return false end
-        local df = QuestMapFrame.DetailsFrame
-        if type(df) == "table" and df.IsShown and df:IsShown() then
-            local id
-            if QuestMapFrame_GetFocusedQuestID then id = QuestMapFrame_GetFocusedQuestID() end
-            if (type(id) ~= "number" or id <= 0) and C_QuestLog and C_QuestLog.GetSelectedQuest then id = C_QuestLog.GetSelectedQuest() end
-            if type(id) == "number" and id > 0 then return id end
-        end
+        return openDetailsQuest()
     end
     return nil
+end
+
+-- A quest ready to turn in, opened in the quest log: the map goes to the zone of its ? (unless that ? is on
+-- the map already). Of several, the one in your own zone.
+local function showTurnIn(questId)
+    local qm = ns.QuestieMap
+    local names = qm and type(qm.questIdFrames) == "table" and qm.questIdFrames[questId]
+    if type(names) ~= "table" or not (WorldMapFrame and WorldMapFrame.GetMapID and WorldMapFrame.SetMapID) then return end
+    local view = WorldMapFrame:GetMapID()
+    local here = ns.HBD and ns.HBD.GetPlayerZone and ns.HBD:GetPlayerZone()
+    local best
+    for _, name in pairs(names) do
+        local f = _G[name]
+        local d = f and f.data
+        if type(d) == "table" and not f.miniMapIcon and d.Type == "complete" and f.UiMapID
+            and not (Questie and d.Icon == Questie.ICON_TYPE_INCOMPLETE) then
+            if f.UiMapID == view or ns.CITY_IN[f.UiMapID] == view then return end   -- its ? is on this map already
+            if not best or (f.UiMapID == here and best.UiMapID ~= here) then best = f end
+        end
+    end
+    if best then WorldMapFrame:SetMapID(best.UiMapID) end
+end
+
+-- The quest log focus runs while the map is open, blobs or not: the quest pointed at (Shift) or whose details
+-- are open, and the move to a turn-in's zone.
+local qstate = {}
+local function updateQuestFocus()
+    local now = GetTime and GetTime() or 0
+    -- the quest log has gaps between its rows: keep the last quest for a moment so the map does not flip back and forth
+    local qf = questLogFocus()
+    if qf == false then
+        qf = nil; qstate.last = nil   -- Shift over open details: show everything right away
+    elseif qf then
+        qstate.last, qstate.t = qf, now
+    elseif qstate.last and now - (qstate.t or 0) < 0.3 then
+        qf = qstate.last
+    else
+        qstate.last = nil
+    end
+    if qf ~= QQ.focusQuest then
+        QQ.focusQuest = qf
+        local h = ns.heat
+        applyFocus(h and h._hovKey, h and h._shift)
+    end
+    local dq = ns.DB.logDetails and openDetailsQuest() or nil
+    if dq ~= qstate.dq then
+        qstate.dq = dq
+        if dq then showTurnIn(dq) end
+    end
+end
+
+function ns.startQuestFocus()
+    if qstate.driver or not WorldMapFrame then return end
+    local d = CreateFrame("Frame", nil, WorldMapFrame)   -- runs only while the map is shown
+    qstate.driver = d
+    d:SetScript("OnUpdate", function(self, elapsed)
+        self._t = (self._t or 0) + elapsed
+        if self._t < 0.1 then return end
+        self._t = 0
+        if not (ns.DB and ns.DB.enabled) then return end
+        local ok, err = pcall(updateQuestFocus)
+        if not ok then reportError("quest log focus: " .. tostring(err)) end
+    end)
 end
 
 function QQ:HoverTick(f, elapsed)
@@ -494,22 +569,6 @@ function QQ:HoverTick(f, elapsed)
     local blobs = QQ.blobs
     if not blobs or S.continent or not f:IsVisible() then return end
     local now = GetTime and GetTime() or 0
-
-    -- the quest log has gaps between its rows: keep the last quest for a moment so the map does not flip back and forth
-    local qf = questLogFocus()
-    if qf == false then
-        qf = nil; f._qfLast = nil   -- Shift over open details: show everything right away
-    elseif qf then
-        f._qfLast, f._qfT = qf, now
-    elseif f._qfLast and now - (f._qfT or 0) < 0.3 then
-        qf = f._qfLast
-    else
-        f._qfLast = nil
-    end
-    if qf ~= QQ.focusQuest then
-        QQ.focusQuest = qf
-        applyFocus(f._hovKey, f._shift)
-    end
 
     local sc = WorldMapFrame and WorldMapFrame.ScrollContainer
     local inside = not (sc and MouseIsOver and not MouseIsOver(sc))

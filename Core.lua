@@ -351,6 +351,7 @@ end
 local function focusHide(f)
     local d = f.data
     if not d or not (QQ.focusQuest or QQ.focusKey) then return nil end
+    if d.Type == "manual" then return true end   -- Questie's town icons step aside as well
     if d.Type ~= "available" and d.Type ~= "complete" then return nil end
     if QQ.focusQuest then return d.Id ~= QQ.focusQuest end
     return true

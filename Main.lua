@@ -97,6 +97,7 @@ local function setup()
 
     -- Rescan only when something relevant changed (map shown, you moved, Questie redrew).
     startMinimap()
+    if ns.startQuestFocus then ns.startQuestFocus() end
     C_Timer.NewTicker(1.0, function()
         if not (WorldMapFrame and WorldMapFrame:IsShown()) then return end
         local frames = 0

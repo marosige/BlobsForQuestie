@@ -320,10 +320,11 @@ end
 -- Flight masters, innkeepers, trainers... (Questie's manual icons): on a zone map the ones of other zones go too.
 local function scanManual()
     local want0 = ns.DB.hideOtherZones and not S.continent and S.viewMap
+    local focus = QQ.focusQuest or QQ.focusKey   -- one quest in focus: the town icons step aside
     ns.eachManual(function(f)
         if f.data and not f.miniMapIcon and f.UiMapID and f.FakeHide then
             ns.hookUnload(f)   -- Questie recycles these frames too: forget our hiding when it does
-            if want0 and not ns.insideView(f) then
+            if focus or (want0 and not ns.insideView(f)) then
                 f._qqHide = true
                 applyHide(f, true, true)
             elseif f._qqHid then

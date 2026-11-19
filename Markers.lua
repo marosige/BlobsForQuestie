@@ -45,6 +45,12 @@ local function layout(f)
     m:SetSize(w * MARK_SCALE, h * MARK_SCALE)
     m:SetFrameLevel((f:GetFrameLevel() or 1) + 2)
     m.badge:SetSize(w * BADGE_SCALE, h * BADGE_SCALE)
+    -- the outline reaches past Questie's icon: pointing at it shows Questie's tooltip too
+    if f._qqGlyph and f.SetHitRectInsets then
+        local px, py = w * (MARK_SCALE - 1) / 2, h * (MARK_SCALE - 1) / 2
+        f:SetHitRectInsets(-px, -px, -py, -py)
+        f._qqHit = true
+    end
 end
 
 local function ensureMark(f)
@@ -52,6 +58,8 @@ local function ensureMark(f)
     if m then return m end
     m = CreateFrame("Frame", nil, f)
     m:EnableMouse(false)   -- Questie's tooltip and clicks stay on the icon
+    if m.SetMouseMotionEnabled then m:SetMouseMotionEnabled(false) end
+    if m.SetMouseClickEnabled then m:SetMouseClickEnabled(false) end
     m.line = m:CreateTexture(nil, "ARTWORK")
     m.line:SetAllPoints()
     m.glyph = m:CreateTexture(nil, "OVERLAY", nil, 1)
@@ -77,6 +85,7 @@ end
 local function unmark(f)
     local m = f._qqMark
     if m and m:IsShown() then m:Hide() end
+    if f._qqHit then f._qqHit = nil; f:SetHitRectInsets(0, 0, 0, 0) end
     if f._qqGlyph then
         f._qqGlyph = nil
         if f.texture and f.texture.SetAlpha then f.texture:SetAlpha(1) end
@@ -103,7 +112,6 @@ local function markIcon(f, plevel)
         return
     end
     local m = ensureMark(f)
-    layout(f)
     if glyph then
         local c = ns.keyColor(key)
         local pic = PICTURES[glyph]
@@ -129,7 +137,9 @@ local function markIcon(f, plevel)
             f._qqGlyph = nil
             if f.texture and f.texture.SetAlpha then f.texture:SetAlpha(1) end
         end
+        if f._qqHit then f._qqHit = nil; f:SetHitRectInsets(0, 0, 0, 0) end
     end
+    layout(f)
     m.badge:SetShown(badge and true or false)
     m:Show()
 end
