@@ -428,6 +428,7 @@ local function buildGUI()
     local function plainCheck(y, key, label, tip, after, w)
         w = w or 240
         local cb = check(p, y, key, label, tip, after)
+        cb.label:SetFontObject("GameFontNormal")
         cb.label:SetWidth(w)
         cb:SetHitRectInsets(0, -w, 0, 0)
         return cb
@@ -448,7 +449,7 @@ local function buildGUI()
             function(v) return format("%d%%", v) end,
             function() return ns.DB[key] end, function(v) ns.DB[key] = v end, true)
         sl:SetFrameLevel((cbP:GetFrameLevel() or 1) + 2)   -- above the checkboxes
-        local lbl = p:CreateFontString(nil, "OVERLAY", "GameFontNormal")
+        local lbl = p:CreateFontString(nil, "OVERLAY", "GameFontHighlight")   -- white, like the value after the slider
         lbl:SetPoint("RIGHT", sl, "LEFT", -8, 0)
         lbl:SetText("Range")
         widgets[#widgets + 1] = function()
