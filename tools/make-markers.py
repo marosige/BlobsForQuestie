@@ -24,13 +24,17 @@ def grow(mask, r):
 def bang():
     m = Image.new("L", (HI, HI)); d = ImageDraw.Draw(m)
     top, bot = OFF + 0.06 * R, OFF + 0.62 * R
-    wt, wb = 0.40 * R, 0.23 * R
+    wt, wb = 0.37 * R, 0.21 * R
     d.polygon([(CX - wt / 2, top + wt / 2), (CX + wt / 2, top + wt / 2), (CX + wb / 2, bot - wb / 2), (CX - wb / 2, bot - wb / 2)], fill=255)
     d.ellipse([CX - wt / 2, top, CX + wt / 2, top + wt], fill=255)
     d.ellipse([CX - wb / 2, bot - wb, CX + wb / 2, bot], fill=255)
-    r, cy = 0.145 * R, OFF + 0.83 * R
+    r, cy = 0.135 * R, OFF + 0.83 * R
     d.ellipse([CX - r, cy - r, CX + r, cy + r], fill=255)
     return m
+
+def shrink(mask, r):   # the opposite of grow: strokes a little thinner
+    inv = ImageChops.invert(mask)
+    return ImageChops.invert(grow(inv, r))
 
 def ask():
     f = ImageFont.truetype("DejaVuSans-Bold.ttf", int(R * 1.1))
@@ -40,10 +44,10 @@ def ask():
     h = 0.86 * R; w = g.width * h / g.height
     g = g.resize((int(w), int(h)), Image.LANCZOS)
     out = Image.new("L", (HI, HI)); out.paste(g, (int(CX - w / 2), int(OFF + 0.07 * R)))
-    return out
+    return shrink(out, 0.014 * R)
 
 def glyph(mask):
-    border = grow(mask, 0.065 * R)
+    border = grow(mask, 0.056 * R)
     img = Image.new("RGBA", (HI, HI), (0, 0, 0, 0))
     dark = Image.new("RGBA", (HI, HI), (28, 20, 8, 255)); dark.putalpha(border); img.alpha_composite(dark)
     grad = Image.new("RGBA", (HI, HI))
@@ -62,7 +66,7 @@ def glyph(mask):
     return img.resize((SZ, SZ), Image.LANCZOS), border
 
 def outline(border):
-    a = grow(border, 0.12 * R).filter(ImageFilter.GaussianBlur(R * 0.008))
+    a = grow(border, 0.105 * R).filter(ImageFilter.GaussianBlur(R * 0.008))
     img = Image.new("RGBA", (HI, HI), (255, 255, 255, 0)); img.putalpha(a)
     return img.resize((SZ, SZ), Image.LANCZOS)
 
