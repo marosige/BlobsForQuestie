@@ -10,6 +10,7 @@ local applyHide = ns.applyHide
 local eachFrame = ns.eachFrame
 local heatColor = ns.heatColor
 local isHidden = ns.isHidden
+local greenRange = ns.greenRange
 local reportError = ns.reportError
 local wantHide = ns.wantHide
 
@@ -211,10 +212,26 @@ local function raiseLayer(f)
     if (f:GetFrameLevel() or 0) ~= want then f:SetFrameLevel(want) end
 end
 
+-- A fill piece: the game would round each piece's box to the screen pixels on its own and only then bend its
+-- corners, so neighbouring pieces would miss each other by a pixel (thin lines in the fill). We place them.
+local function newFillTexture(f)
+    local t = f:CreateTexture(nil, "ARTWORK")
+    if f.mask and t.AddMaskTexture then t:AddMaskTexture(f.mask) end
+    if t.SetSnapToPixelGrid then t:SetSnapToPixelGrid(false) end
+    if t.SetTexelSnappingBias then t:SetTexelSnappingBias(0) end
+    return t
+end
+
 local function drawBlobs(f, list, W, H)
-    local es = f:GetEffectiveScale()
-    if type(es) ~= "number" or es <= 0 then es = 1 end
-    local function snap(v) return floor(v * es + 0.5) / es end
+    -- screen pixels per unit of this layer: the UI is 768 units tall at scale 1
+    local ppu = f:GetEffectiveScale()
+    if type(ppu) ~= "number" or ppu <= 0 then ppu = 1 end
+    if GetPhysicalScreenSize then
+        local _, ph = GetPhysicalScreenSize()
+        if type(ph) == "number" and ph > 0 then ppu = ppu * ph / 768 end
+    end
+    -- every edge and corner on the screen's pixel grid: pieces that share an edge then meet exactly
+    local function snap(v) return floor(v * ppu + 0.5) / ppu end
     local ti, li = 0, 0
 
     local function drawOne(blob)
@@ -229,8 +246,7 @@ local function drawBlobs(f, list, W, H)
                 ti = ti + 1
                 local t = f.tex[ti]
                 if not t then
-                    t = f:CreateTexture(nil, "ARTWORK")
-                    if f.mask and t.AddMaskTexture then t:AddMaskTexture(f.mask) end
+                    t = newFillTexture(f)
                     f.tex[ti] = t
                 end
                 if t._vo then for v = 1, 4 do t:SetVertexOffset(v, 0, 0) end; t._vo = nil end
@@ -246,8 +262,7 @@ local function drawBlobs(f, list, W, H)
             ti = ti + 1
             local t = f.tex[ti]
             if not t then
-                t = f:CreateTexture(nil, "ARTWORK")
-                if f.mask and t.AddMaskTexture then t:AddMaskTexture(f.mask) end
+                t = newFillTexture(f)
                 f.tex[ti] = t
             end
             t:ClearAllPoints()
@@ -255,18 +270,22 @@ local function drawBlobs(f, list, W, H)
         end
         if f.voOK then
             for _, q in ipairs((graded and c.hpieces) or c.pieces or {}) do
+                -- Every corner on the same grid as the rectangles: a corner on a cell edge then lies exactly on the
+                -- rectangle next to it, so the pieces meet with no 1-pixel gap or overlap (thin lines in the fill).
+                local x1, y1, x3, y3 = snap(q[1]), snap(q[2]), snap(q[3]), snap(q[4])
+                local x4, y4, x2, y2 = snap(q[5]), snap(q[6]), snap(q[7]), snap(q[8])
                 -- the quad's box, then each corner moved onto its point (1 upper left, 2 lower left, 3 upper right, 4 lower right; y up)
-                local bx1, by1 = snap(min(q[1], q[7])), snap(min(q[2], q[4]))
-                local bx2, by2 = snap(max(q[3], q[5])), snap(max(q[6], q[8]))
-                if bx2 - bx1 < 0.5 then bx2 = bx1 + 0.5 end
-                if by2 - by1 < 0.5 then by2 = by1 + 0.5 end
+                local bx1, by1 = min(x1, x2), min(y1, y3)
+                local bx2, by2 = max(x3, x4), max(y4, y2)
+                if bx2 - bx1 < 0.5 / ppu then bx2 = bx1 + 1 / ppu end
+                if by2 - by1 < 0.5 / ppu then by2 = by1 + 1 / ppu end
                 local t = newTex()
                 t:SetSize(bx2 - bx1, by2 - by1)
                 t:SetPoint("TOPLEFT", f, "TOPLEFT", bx1, -by1)
-                t:SetVertexOffset(1, q[1] - bx1, by1 - q[2])
-                t:SetVertexOffset(3, q[3] - bx2, by1 - q[4])
-                t:SetVertexOffset(4, q[5] - bx2, by2 - q[6])
-                t:SetVertexOffset(2, q[7] - bx1, by2 - q[8])
+                t:SetVertexOffset(1, x1 - bx1, by1 - y1)
+                t:SetVertexOffset(3, x3 - bx2, by1 - y3)
+                t:SetVertexOffset(4, x4 - bx2, by2 - y4)
+                t:SetVertexOffset(2, x2 - bx1, by2 - y2)
                 t._vo = true
                 if graded then t._h, t._mL, t._mR = nil, q.mL, q.mR else t._h, t._mL, t._mR = nil, nil, nil end
                 t:Show()
@@ -320,6 +339,18 @@ local function drawBlobs(f, list, W, H)
     for i = li + 1, #f.lines do f.lines[i]:Hide() end
 end
 
+-- what the colours of the drawn blobs depend on, besides their shapes
+local COLOR_KEYS = { "kill", "loot", "lootMid", "lootLow", "other" }
+local function colorSig()
+    local a, cs = ns.DB.colorAll, ns.DB.colors
+    local s = format("%s|%.3f|%d|%.3f,%.3f,%.3f", ns.DB.colorMode, ns.DB.blobAlpha, greenRange(), a[1], a[2], a[3])
+    for _, k in ipairs(COLOR_KEYS) do
+        local c = cs[k]
+        if c then s = s .. format("|%.3f,%.3f,%.3f", c[1], c[2], c[3]) end
+    end
+    return s
+end
+
 local function updateLayer(list, W, H)
     local f = ensureHeat()
     raiseLayer(f)
@@ -329,14 +360,21 @@ local function updateLayer(list, W, H)
     table.sort(parts)
     local sig = format("%s|%d|%d|", tostring(S.viewMap), floor(W), floor(H)) .. table.concat(parts, ";")
     local nowT = GetTime and GetTime() or 0
+    local redrawn = false
     if f._dsig ~= sig or nowT - (f._dT or 0) > 10 then   -- redraw on change, and every 10 s as a safety net
         f._dsig = nil
         f._dT = nowT
         local ok, err = pcall(drawBlobs, f, list, W, H)
         if ok then f._dsig = sig else reportError("drawing blobs: " .. tostring(err)) end
+        redrawn = true
     end
     f._W, f._H = W, H
-    for _, b in ipairs(list) do lookBlob(f, b) end
+    -- colouring every piece is the costly part of a scan: only when the pieces or their colours changed
+    local csig = colorSig()
+    if redrawn or f._csig ~= csig then
+        f._csig = csig
+        for _, b in ipairs(list) do lookBlob(f, b) end
+    end
     f:Show()
 end
 

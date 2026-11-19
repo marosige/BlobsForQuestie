@@ -109,6 +109,8 @@ function ns.debugReport()
     if st then
         line("last map scan: " .. (st.ms and format("%.1f ms", st.ms) or "?") .. ", " .. st.blobs .. " blobs, "
             .. (st.continent and "continent / world map" or "zone map") .. " " .. tostring(st.map))
+        line("map scans: " .. (QQ.scans or 0) .. ", blob shapes built: " .. (QQ.geomBuilds or 0)
+            .. (QQ.geomMs and format(" (last %.0f ms)", QQ.geomMs) or ""))
     else
         line("last map scan: none yet (open the map)")
     end

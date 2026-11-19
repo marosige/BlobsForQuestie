@@ -47,6 +47,23 @@ local function colorGroupKey(step)
     return "ALL"
 end
 
+-- One point per cell of a blob is plenty. Which one stays does not depend on the order Questie lists its icons
+-- in (it changes when Questie redraws them): otherwise the same spots would build the blobs again.
+local function addPoint(g, cell, x, y, kind, step)
+    local i = g.seen[cell]
+    if not i then
+        local n = #g.pts + 1
+        g.pts[n] = { x, y, kind, step }
+        g.seen[cell] = n
+        return
+    end
+    local p = g.pts[i]
+    local s, ps = step or 99, p[4] or 99
+    if x < p[1] or (x == p[1] and (y < p[2] or (y == p[2] and (s < ps or (s == ps and kind < p[3]))))) then
+        p[1], p[2], p[3], p[4] = x, y, kind, step
+    end
+end
+
 ---------------------------------------------------------------------------
 -- Patrol paths: a walking mob's whole route belongs to its blob, not just its spawn point.
 -- Questie keeps the routes on the icon's data (data.waypointPaths: points in map percent and in world yards).
@@ -158,18 +175,10 @@ local function scanZone()
         local g = groups[gk]
         if not g then g = { key = gk, near = near and not merged, noDraw = it.kind == 4, items = {}, pts = {}, seen = {} }; groups[gk] = g end
         g.items[#g.items + 1] = it
-        local cell = floor(it.f.x * 1.25) * 1000 + floor(it.f.y * 1.25)   -- one point per ~0.8% cell is plenty
-        if not g.seen[cell] then
-            g.seen[cell] = true
-            g.pts[#g.pts + 1] = { it.x, it.y, it.kind, it.step }
-        end
+        addPoint(g, floor(it.f.x * 1.25) * 1000 + floor(it.f.y * 1.25), it.x, it.y, it.kind, it.step)   -- ~0.8% cells
         if it.extra then   -- the whole patrol route is part of the blob
             for _, e in ipairs(it.extra) do
-                local ec = floor(e[1] * 1.25) * 1000 + floor(e[2] * 1.25)
-                if not g.seen[ec] then
-                    g.seen[ec] = true
-                    g.pts[#g.pts + 1] = { e[3], e[4], it.kind, it.step }
-                end
+                addPoint(g, floor(e[1] * 1.25) * 1000 + floor(e[2] * 1.25), e[3], e[4], it.kind, it.step)
             end
         end
     end
@@ -242,21 +251,14 @@ local function scanContinent()
             if not r then return end
             local z = zones[f.UiMapID]
             if not z then z = { pts = {}, seen = {} }; zones[f.UiMapID] = z end
-            local cell = floor(f.x * 0.8) * 1000 + floor(f.y * 0.8)
-            local kd = classOf(d.Icon)
-            if not z.seen[cell] then
-                z.seen[cell] = true
-                z.pts[#z.pts + 1] = { (r[1] + f.x / 100 * (r[2] - r[1])) * W, (r[3] + f.y / 100 * (r[4] - r[3])) * H,
-                    kd, heatStep(d, plevel) }
-            end
+            local kd, st = classOf(d.Icon), heatStep(d, plevel)
+            addPoint(z, floor(f.x * 0.8) * 1000 + floor(f.y * 0.8),
+                (r[1] + f.x / 100 * (r[2] - r[1])) * W, (r[3] + f.y / 100 * (r[4] - r[3])) * H, kd, st)
             local ex = patrolPoints(f, 100, 100, 1.5)   -- in map percent here: about every 1.5%
             if ex then
                 for _, e in ipairs(ex) do
-                    local ec = floor(e[1] * 0.8) * 1000 + floor(e[2] * 0.8)
-                    if not z.seen[ec] then
-                        z.seen[ec] = true
-                        z.pts[#z.pts + 1] = { (r[1] + e[1] / 100 * (r[2] - r[1])) * W, (r[3] + e[2] / 100 * (r[4] - r[3])) * H, kd, heatStep(d, plevel) }
-                    end
+                    addPoint(z, floor(e[1] * 0.8) * 1000 + floor(e[2] * 0.8),
+                        (r[1] + e[1] / 100 * (r[2] - r[1])) * W, (r[3] + e[2] / 100 * (r[4] - r[3])) * H, kd, st)
                 end
             end
         elseif f._qqHid then
@@ -335,6 +337,7 @@ function QQ:Scan()
     updateState()
     if not S.viewMap or not WorldMapFrame then return end
     local t0 = debugprofilestop and debugprofilestop()
+    QQ.scans = (QQ.scans or 0) + 1   -- for /blob debug
     scanManual()
     if S.continent then scanContinent() else scanZone() end
     if QQ.focusQuest or QQ.focusKey then refocusOthers() end

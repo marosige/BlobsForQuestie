@@ -666,14 +666,23 @@ local function compAt(G, x, y)
     return best
 end
 
+-- The signature does not depend on the order of the points: Questie lists its icons in another order after it
+-- redraws them (the same spots), and that must not build the blobs again (the costly part of a scan).
 local geomCache, geomSerial = {}, 0
 local function cachedGeometry(key, pts, R, W, H)
-    local h = 0
-    for _, p in ipairs(pts) do h = (h * 31 + floor(p[1]) * 7 + floor(p[2]) + (p[4] or 99) * 13) % 1000003 end
-    local sig = format("%d|%d|%d|%d|%d", floor(W), floor(H), floor(R), #pts, h)
+    local s1, s2 = 0, 0
+    for _, p in ipairs(pts) do
+        local v = (floor(p[1]) * 7919 + floor(p[2]) * 104729 + ((p[4] or 99) + 1000) * 13 + (p[3] or 0) * 3) % 1000003
+        s1 = (s1 + v) % 2147483647
+        s2 = (s2 + v * v) % 2147483647
+    end
+    local sig = format("%d|%d|%d|%d|%d|%d", floor(W), floor(H), floor(R), #pts, s1, s2)
     local e = geomCache[key]
     if e and e.sig == sig then return e.G end
+    local t0 = debugprofilestop and debugprofilestop()
     local G = buildGeometry(pts, R)
+    QQ.geomBuilds = (QQ.geomBuilds or 0) + 1   -- for /blob debug
+    QQ.geomMs = t0 and (debugprofilestop() - t0) or nil
     geomSerial = geomSerial + 1
     for _, c in ipairs(G.comps) do c.gid = geomSerial end
     geomCache[key] = { sig = sig, G = G }
