@@ -22,16 +22,15 @@ local function isForeverQuest(id)
     return type(id) == "number" and id > LAST_CLASSIC_QUEST
 end
 
--- Which of our pictures replaces Questie's: "bang" (available !), "ask" (turn-in ?), nil = Questie's own stays
--- (repeatable, PvP and event quests keep their colours). grey: Questie's grey ! (too low, or not yet available).
+-- Which of our pictures replaces Questie's: "bang" (available !, Questie's grey ! too), "ask" (turn-in ?),
+-- nil = Questie's own stays (repeatable, PvP and event quests keep their colours)
 local function glyphOf(d)
     if not Questie then return nil end
     local ic = d.Icon
     if d.Type == "available" then
-        if ic == Questie.ICON_TYPE_AVAILABLE then return "bang", false end
-        if ic == Questie.ICON_TYPE_AVAILABLE_GRAY then return "bang", true end
+        if ic == Questie.ICON_TYPE_AVAILABLE or ic == Questie.ICON_TYPE_AVAILABLE_GRAY then return "bang" end
     elseif d.Type == "complete" and ic == Questie.ICON_TYPE_COMPLETE then
-        return "ask", false
+        return "ask"
     end
     return nil
 end
@@ -100,14 +99,11 @@ local function markIcon(f, plevel)
         unmark(f)
         return
     end
-    local glyph, grey, key
+    local glyph, key
     if ns.DB.colorAvail then
-        glyph, grey = glyphOf(d)
+        glyph = glyphOf(d)
         key = glyph and ns.levelBand(d, plevel)
         if not key then glyph = nil end   -- level unknown: Questie's picture stays
-        -- A grey quest (by the game's title colours) gets a grey ! as well, not a yellow one in a grey outline:
-        -- Questie's own idea of "too low" can differ from the game's.
-        if glyph == "bang" and key == "trivial" then grey = true end
     end
     local badge = ns.DB.markForever and isForeverQuest(d.Id)
     if not glyph and not badge then
@@ -121,7 +117,7 @@ local function markIcon(f, plevel)
         m.line:SetTexture(pic[2])
         m.line:SetVertexColor(c[1], c[2], c[3], 1)
         m.glyph:SetTexture(pic[1])
-        m.glyph:SetDesaturated(grey and true or false)
+        m.glyph:SetDesaturated(false)   -- always the gold sign: the outline alone tells the difficulty, grey ones too
         m.line:Show(); m.glyph:Show()
         -- Questie's own picture under ours: hidden, not faded. A texture's alpha is its colour's alpha, which
         -- Questie reads to tell a faded icon, and a faded icon shows no tooltip.

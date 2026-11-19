@@ -578,7 +578,7 @@ local function buildGUI()
                 -- plain, drop and dungeon quests get our ! with its outline; PvP and repeatable keep Questie's
                 local ours = ns.DB.colorAvail and (q[3] == "n" or q[3] == "d" or q[3] == "g") and "bang" or nil
                 local key = questKey(q[4] == -99 and -(gr + 1) or q[4])
-                e.mk.set(ok, ours, key, key == "trivial", pathOf[q[3]], ns.DB.markForever and NEW[n])
+                e.mk.set(ok, ours, key, false, pathOf[q[3]], ns.DB.markForever and NEW[n])
                 if e.badge then e.badge:SetShown(ok and true or false) end
             end
         end
@@ -620,7 +620,7 @@ local function buildGUI()
             local isAsk = i > #BAND_STEPS
             local step = isAsk and -3 or BAND_STEPS[i]
             local key = questKey(step == -99 and -(gr + 1) or step)
-            mk.set(true, ns.DB.colorAvail and (isAsk and "ask" or "bang") or nil, key, key == "trivial", isAsk and complete or avail, false)
+            mk.set(true, ns.DB.colorAvail and (isAsk and "ask" or "bang") or nil, key, false, isAsk and complete or avail, false)
         end
     end
 
