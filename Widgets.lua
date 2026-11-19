@@ -13,7 +13,7 @@ local safeScan = ns.safeScan
 ---------------------------------------------------------------------------
 
 local widgets = {}
-local GUI_W, GUI_H = 480, 540
+local GUI_W, GUI_H = 480, 556
 local PAD = 18
 local CW = GUI_W - 2 * PAD   -- content width
 local ICONS = "Interface\\AddOns\\BlobsForQuestie\\Icons\\"

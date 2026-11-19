@@ -423,11 +423,13 @@ local function buildGUI()
     end
     makeHeader(p, X, -PH - 12, "Show Questie's own icons")
     local HALF = floor((CW - 28 - 24) / 2)
-    local function plainCheck(y, key, label, tip, after)
+    -- w: width of the label (and of the clickable area right of the box)
+    local function plainCheck(y, key, label, tip, after, w)
+        w = w or 240
         local cb = check(p, y, key, label, tip, after)
         cb.label:SetFontObject("GameFontNormal")
-        cb.label:SetWidth(240)
-        cb:SetHitRectInsets(0, -240, 0, 0)
+        cb.label:SetWidth(w)
+        cb:SetHitRectInsets(0, -w, 0, 0)
         return cb
     end
     plainCheck(-PH - 34, "revealAll", "Everywhere",
@@ -435,40 +437,35 @@ local function buildGUI()
     -- each of the two has its own radius, in line with its checkbox
     local SLX = X + 196
     local SLW = CW - 196 - 52
+    local LW = SLX - X - 24 - 6   -- the checkbox (and its label) ends before the slider, or it takes the slider's clicks
     local cbP = plainCheck(-PH - 60, "showNearPlayer", "Around your character",
-        "Shows Questie's icons instead of blobs near your character.")
+        "Shows Questie's icons instead of blobs near your character.", nil, LW)
     local cbM = plainCheck(-PH - 86, "showNearMouse", "Around the mouse",
-        "Shows Questie's icons instead of blobs around the mouse pointer.", function() if QQ.ClearCursor then QQ:ClearCursor() end end)
+        "Shows Questie's icons instead of blobs around the mouse pointer.", function() if QQ.ClearCursor then QQ:ClearCursor() end end, LW)
     local function radius(y, key, tip, flag)
         local sl = makeSlider(p, SLX, y - 6, SLW, "Radius", tip, 1, 40, 1,
             function(v) return format("%d%%", v) end,
             function() return ns.DB[key] end, function(v) ns.DB[key] = v end, true)
+        sl:SetFrameLevel((cbP:GetFrameLevel() or 1) + 2)   -- above the checkboxes
         widgets[#widgets + 1] = function() setActive(sl, ns.DB[flag] and not ns.DB.revealAll and true or false) end
         return sl
     end
     radius(-PH - 60, "objPlayer", "Radius around your character, in percent of the map width.", "showNearPlayer")
     radius(-PH - 86, "objMouse", "Radius around the mouse, in percent of the map width.", "showNearMouse")
 
-    -- two columns: what to hide, and what happens when you point at something
-    local COLW = floor((CW - 16) / 2)
-    local X2 = X + COLW + 16
-    local function colCheck(x, y, key, label, tip, after)
-        return makeCheck(p, x, y, label, tip,
-            function() return ns.DB[key] end,
-            function(v) ns.DB[key] = v; if after then after() end end, COLW)
-    end
-    makeHeader(p, X, -PH - 118, "Hide Questie icons", COLW)
-    colCheck(X, -PH - 140, "hideOtherZones", "From neighbouring zones",
+    -- what to hide, then what happens when you point at something
+    makeHeader(p, X, -PH - 118, "Hide Questie icons")
+    check(p, -PH - 140, "hideOtherZones", "From neighbouring zones",
         "Zone maps show only the icons of that zone, not those of the zones around it: quest icons and Questie's town icons (flight masters, innkeepers, trainers...). Cities inside the zone stay. Blizzard's own map icons are not affected.")
-    colCheck(X, -PH - 176, "hideDungeonQuests", "Of dungeon quests on outdoor maps",
+    check(p, -PH - 166, "hideDungeonQuests", "Of dungeon quests on outdoor maps",
         "Hides the icons Questie draws at a dungeon entrance for quests that happen inside the dungeon.")
 
-    makeHeader(p, X2, -PH - 118, "Mouse over", COLW)
-    colCheck(X2, -PH - 140, "hoverShow", "Show every spot of an objective when pointing at it",
+    makeHeader(p, X, -PH - 198, "Mouse over")
+    check(p, -PH - 220, "hoverShow", "Show every spot of an objective when pointing at it",
         "Point at a Questie icon on the map to see that objective's icons in every blob.", function() if QQ.ClearCursor then QQ:ClearCursor() end end)
-    colCheck(X2, -PH - 176, "shiftFocus", "Hold Shift over an objective or quest to hide the rest",
+    check(p, -PH - 246, "shiftFocus", "Hold Shift over an objective or quest to hide the rest",
         "Hold Shift while pointing at a Questie icon on the map or at a quest in the quest log: only that objective or quest keeps its icons. All other icons, quest givers and turn-ins hide. Blobs always stay. Shift + click on an icon opens that quest's details in the quest log.", function() if QQ.ClearCursor then QQ:ClearCursor() end end)
-    colCheck(X2, -PH - 212, "logDetails", "Show only a quest's objectives while its details are open",
+    check(p, -PH - 272, "logDetails", "Show only a quest's objectives while its details are open",
         "Shows only that quest's icons on the map as long as its details are open in the quest log. Hold Shift to show everything again.")
 
     -- 3: Available quests -------------------------------------------------------------------

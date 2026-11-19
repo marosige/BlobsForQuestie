@@ -8,6 +8,7 @@ local ICONS = ns.ICONS
 local kindIcon = ns.kindIcon
 local questColor = ns.questColor
 local questieIcon = ns.questieIcon
+local hGradient = ns.hGradient
 local safeScan = ns.safeScan
 
 ---------------------------------------------------------------------------
@@ -137,7 +138,8 @@ local function buildPanel()
         "Available quests that start from a dropped item are shown.", "Available quests that start from a dropped item are hidden.",
         function() return not ns.DB.hideItemStarts end, function() ns.DB.hideItemStarts = not ns.DB.hideItemStarts end)
 
-    -- 4: blob colour, steps through the three modes; the icon is a small blob in the current colours
+    -- 4: blob colour, steps through the three modes. Its picture says which, without knowing the colours:
+    -- a plain blob (one color), rising bars (by quest level), Questie's kill and loot icons (by objective)
     do
         local MODES = { "single", "level", "kind" }
         local NAMES = { single = "One color", level = "By quest level", kind = "By objective" }
@@ -145,20 +147,27 @@ local function buildPanel()
         b:SetSize(20, 20)
         b:SetPoint("LEFT", px(4), 0)
         panelBtns[4] = b
-        local slices = {}
-        for k = 1, 3 do
-            local t = b:CreateTexture(nil, "ARTWORK")
-            t:SetTexture(ICONS .. "blob.png")
-            t:SetSize(7, 14)
-            t:SetPoint("LEFT", (k - 1) * 7 - 1, 0)
-            t:SetTexCoord((k - 1) / 3, k / 3, 0, 1)
-            slices[k] = t
-        end
+        local plain = b:CreateTexture(nil, "ARTWORK")
+        plain:SetTexture(ICONS .. "blob.png")
+        plain:SetSize(21, 14)
+        plain:SetPoint("LEFT", -1, 0)
         local line = b:CreateTexture(nil, "OVERLAY")
         line:SetTexture(ICONS .. "blobline.png")
-        line:SetSize(21, 14)
-        line:SetPoint("LEFT", -1, 0)
+        line:SetAllPoints(plain)
         line:SetVertexColor(1, 0.95, 0.8, 0.9)
+        local bars = {}   -- low, your level, high: like a difficulty meter
+        for k = 1, 3 do
+            local t = b:CreateTexture(nil, "ARTWORK")
+            t:SetSize(4, 3 + k * 4)
+            t:SetPoint("BOTTOMLEFT", 2 + (k - 1) * 6, 3)
+            bars[k] = t
+        end
+        local killIc = b:CreateTexture(nil, "ARTWORK")
+        killIc:SetSize(14, 14)
+        killIc:SetPoint("TOPLEFT", -1, 1)
+        local lootIc = b:CreateTexture(nil, "OVERLAY")
+        lootIc:SetSize(14, 14)
+        lootIc:SetPoint("BOTTOMRIGHT", 1, -1)
         b:RegisterForClicks("LeftButtonUp", "RightButtonUp")
         b:SetScript("OnClick", function(_, button)
             local cur = 1
@@ -177,11 +186,23 @@ local function buildPanel()
         end)
         b:SetScript("OnLeave", function() GameTooltip:Hide() end)
         panelChecks[#panelChecks + 1] = function()
-            local cols
-            if ns.DB.colorMode == "level" then cols = { questColor(-3), questColor(0), questColor(5) }
-            elseif ns.DB.colorMode == "kind" then cols = { ns.DB.colors.kill, ns.DB.colors.loot, ns.DB.colors.other }
-            else cols = { ns.DB.colorAll, ns.DB.colorAll, ns.DB.colorAll } end
-            for k, t in ipairs(slices) do t:SetVertexColor(cols[k][1], cols[k][2], cols[k][3], 0.95) end
+            local m = ns.DB.colorMode
+            local kill, loot = questieIcon(1), questieIcon(2)
+            if kill then killIc:SetTexture(kill) end
+            if loot then lootIc:SetTexture(loot) end
+            local icons = m == "kind" and kill and loot
+            killIc:SetShown(icons and true or false)
+            lootIc:SetShown(icons and true or false)
+            for k, t in ipairs(bars) do
+                local c = questColor(({ -3, 0, 5 })[k])
+                t:SetColorTexture(c[1], c[2], c[3], 0.95)
+                t:SetShown(m == "level")
+            end
+            -- one color (or Questie's icons not there): a plain blob in that colour
+            local blob = m == "single" or (m == "kind" and not icons)
+            local c = m == "kind" and ns.DB.colors.kill or ns.DB.colorAll
+            plain:SetVertexColor(c[1], c[2], c[3], 0.95)
+            plain:SetShown(blob); line:SetShown(blob)
         end
     end
 
@@ -227,7 +248,10 @@ local function buildPanel()
             local byColor = mode == "color" and ns.DB.colorMode ~= "single"
             one:SetShown(mode == "all" or (mode == "color" and not byColor))
             for _, t in ipairs(two) do t:SetShown(mode == "quest" or byColor) end   -- by color: two separate blobs, two colors
-            one:SetVertexColor(c[1], c[2], c[3], 0.95)
+            -- unified: one blob, its colour flows gently from one part to the next (two neighbouring colours)
+            local flow = mode == "all" and ns.DB.colorMode ~= "single"
+            local f2 = ns.DB.colorMode == "kind" and (ns.DB.colors.lootMid or c) or c2
+            if not (flow and hGradient(one, c, f2, 0.95)) then one:SetVertexColor(c[1], c[2], c[3], 0.95) end
             two[1]:SetVertexColor(c[1], c[2], c[3], 0.95)
             local d = byColor and c2 or c
             two[2]:SetVertexColor(d[1], d[2], d[3], 0.95)

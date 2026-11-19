@@ -44,8 +44,9 @@ local DEFAULTS = {
     colorMode = "level",   -- blob colour: "single" (one colour), "level" (heat map of the quest levels) or "kind" (kill / loot / other)
     lootByDrop = true,     -- "kind" colours: loot changes to its low-rate color where the drop rate is low
     colorAll = { 0.10, 0.28, 0.70 },   -- the "single" colour (dark blue, like the game's own quest blobs)
-    -- the "kind" colours; loot has three by drop rate: loot = good (80% and up), lootMid, lootLow = poor (under 30%)
-    colors = { kill = { 0.62, 0.30, 0.92 }, loot = { 0.98, 0.84, 0.12 }, lootMid = { 0.98, 0.52, 0.10 }, lootLow = { 0.86, 0.14, 0.14 }, other = { 0.22, 0.68, 0.32 } },
+    -- the "kind" colours. Loot by drop rate like a traffic light: loot = good (80% and up, green), lootMid (yellow),
+    -- lootLow = poor (under 30%, red); kill and other in colours of their own (purple, blue), never read as a rate
+    colors = { kill = { 0.62, 0.30, 0.92 }, loot = { 0.20, 0.75, 0.25 }, lootMid = { 0.98, 0.84, 0.12 }, lootLow = { 0.86, 0.14, 0.14 }, other = { 0.15, 0.55, 0.95 } },
     hideDungeonQuests = true,    -- hide quest icons drawn at dungeon entrances for things inside the dungeon
     hideOtherZones = true, -- zone map: hide the Questie icons of neighbouring zones
 }
@@ -98,12 +99,13 @@ local function initDB()
         if type(ns.DB[k]) ~= type(v) then ns.DB[k] = copyDefault(k, v) end
     end
     if ns.DB.colorMode ~= "single" and ns.DB.colorMode ~= "level" and ns.DB.colorMode ~= "kind" then ns.DB.colorMode = DEFAULTS.colorMode end
-    -- the first kind colours (purple / blue / teal) were replaced: move them to the new ones
+    -- earlier default kind colours (never changed by the player) move to the current ones
     local OLD = {
         kill = { { 0.60, 0.32, 0.95 }, { 0.80, 0.22, 0.22 } },
-        loot = { { 0.28, 0.52, 1.00 }, { 0.20, 0.45, 0.92 }, { 0.10, 0.62, 0.98 } },
+        loot = { { 0.28, 0.52, 1.00 }, { 0.20, 0.45, 0.92 }, { 0.10, 0.62, 0.98 }, { 0.98, 0.84, 0.12 } },   -- last: yellow until 1.0.1
+        lootMid = { { 0.98, 0.52, 0.10 } },                                                                  -- orange until 1.0.1
         lootLow = { { 0.60, 0.15, 0.85 } },
-        other = { { 0.25, 0.80, 0.65 } },
+        other = { { 0.25, 0.80, 0.65 }, { 0.22, 0.68, 0.32 } },                                              -- last: green until 1.0.1
     }
     for k, list in pairs(OLD) do
         local c = ns.DB.colors[k]
