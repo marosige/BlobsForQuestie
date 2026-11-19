@@ -10,9 +10,10 @@ ADDON=BlobsForQuestie
 # everything that goes into the zip; add new textures / Lua files here
 FILES=(
     BlobsForQuestie.toc
-    Core.lua Geometry.lua Layer.lua Scan.lua Widgets.lua MapButtons.lua Settings.lua Commands.lua Main.lua
+    Core.lua Geometry.lua Layer.lua Markers.lua Scan.lua Widgets.lua MapButtons.lua Settings.lua Commands.lua Main.lua
     Icons/arrow.png Icons/blob.png Icons/blobline.png Icons/blobwide.png Icons/blobwideline.png
     Icons/cursor.png Icons/icon.png Icons/mapbg.png Icons/player.png Icons/splat.png
+    Icons/bang.png Icons/bangline.png Icons/ask.png Icons/askline.png Icons/forever.png
 )
 
 cd "$(dirname "$0")"

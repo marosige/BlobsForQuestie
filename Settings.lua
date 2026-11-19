@@ -25,7 +25,7 @@ local makeSegmented = ns.makeSegmented
 local makeSlider = ns.makeSlider
 local makeSwatch = ns.makeSwatch
 local makeSwitch = ns.makeSwitch
-local paintAvail = ns.paintAvail
+local keyColor = ns.keyColor
 local panelChecks = ns.panelChecks
 local questKey = ns.questKey
 local questieIcon = ns.questieIcon
@@ -454,11 +454,12 @@ local function buildGUI()
     radius(-PH - 86, "objMouse", "In percent of the map width.", "showNearMouse")
 
     -- what to hide, then what happens when you point at something
-    makeHeader(p, X, -PH - 118, "Hide")
-    check(p, -PH - 140, "hideOtherZones", "Icons of neighbouring zones",
-        "A zone map shows only its own icons: quests and Questie's town icons (flight masters, innkeepers...). Cities inside the zone count as the zone. Off: the neighbours' objectives become blobs too. Blizzard's own icons stay.")
+    makeHeader(p, X, -PH - 118, "Zone maps also show")
+    check(p, -PH - 140, "hideOtherZones", "Neighbouring zones",
+        "Their quests (blobs and icons, as in your own zone) and Questie's town icons. Off: they stay empty. A city always shows in its own zone. Blizzard's own map icons are not touched.",
+        nil, nil, true)
     check(p, -PH - 166, "hideDungeonQuests", "Dungeon quests at the entrance",
-        "The icons Questie puts at a dungeon entrance for quests inside it.")
+        "The icons Questie puts at a dungeon entrance for quests inside it.", nil, nil, true)
 
     makeHeader(p, X, -PH - 198, "Mouse over")
     check(p, -PH - 220, "hoverShow", "Point at an icon: show all its spots",
@@ -471,6 +472,40 @@ local function buildGUI()
     -- 3: Available quests -------------------------------------------------------------------
     p = pages[3]
     local avail = questieIcon(Questie and Questie.ICON_TYPE_AVAILABLE)
+    -- a quest marker as on the map: our sign with its coloured outline (or Questie's picture), and the badge
+    local BANG, BANGLINE, ASK, ASKLINE = ICONS .. "bang.png", ICONS .. "bangline.png", ICONS .. "ask.png", ICONS .. "askline.png"
+    local function marker(parent, size, x, y, anchor)
+        local mk = {}
+        local m = size * 1.3
+        mk.line = parent:CreateTexture(nil, "ARTWORK", nil, 1)
+        mk.line:SetSize(m, m); mk.line:SetPoint("CENTER", parent, anchor or "TOPLEFT", x, y)
+        mk.sign = parent:CreateTexture(nil, "ARTWORK", nil, 2)
+        mk.sign:SetSize(m, m); mk.sign:SetPoint("CENTER", parent, anchor or "TOPLEFT", x, y)
+        mk.badge = parent:CreateTexture(nil, "OVERLAY", nil, 1)
+        mk.badge:SetTexture(ICONS .. "forever.png")
+        mk.badge:SetSize(size * 0.62, size * 0.62); mk.badge:SetPoint("TOPRIGHT", mk.sign, "TOPRIGHT", 0, 0)
+        -- ours: "bang" / "ask" with the difficulty key (nil = Questie's own picture `questiePath`)
+        function mk.set(shown, ours, key, grey, questiePath, isNew)
+            local outline = shown and ours and key and true or false
+            mk.line:SetShown(outline)
+            if outline then
+                local c = keyColor(key)
+                mk.line:SetTexture(ours == "ask" and ASKLINE or BANGLINE)
+                mk.line:SetVertexColor(c[1], c[2], c[3], 1)
+                mk.sign:SetTexture(ours == "ask" and ASK or BANG)
+                mk.sign:SetSize(m, m)
+                mk.sign:SetDesaturated(grey and true or false)
+            elseif questiePath then
+                mk.sign:SetTexture(questiePath)
+                mk.sign:SetSize(size, size)
+                mk.sign:SetDesaturated(false)
+            end
+            mk.sign:SetShown(shown and true or false)
+            mk.badge:SetShown((shown and isNew) and true or false)
+        end
+        return mk
+    end
+
     -- demo: available quests around the character and the mouse
     do
         local box3 = mapStrip(p, 0.3)
@@ -496,20 +531,18 @@ local function buildGUI()
             r = questieIcon(Questie and Questie.ICON_TYPE_REPEATABLE) or avail,
         }
         local loot = questieIcon(Questie and Questie.ICON_TYPE_LOOT)
+        local NEW = { [3] = true, [8] = true, [13] = true, [19] = true }   -- a few quests new in Forever
         local shown = {}
         for n, q in ipairs(ICONS3) do
-            local t = box3:CreateTexture(nil, "ARTWORK")
-            t:SetSize(16, 16)
-            t:SetPoint("CENTER", box3, "TOPLEFT", q[1], -(CY + q[2]))
-            if pathOf[q[3]] then t:SetTexture(pathOf[q[3]]) end
+            local mk = marker(box3, 16, q[1], -(CY + q[2]))
             local badge
             if q[3] == "d" and loot then   -- a small bag: started by a dropped item
-                badge = box3:CreateTexture(nil, "OVERLAY")
+                badge = box3:CreateTexture(nil, "OVERLAY", nil, 2)
                 badge:SetSize(9, 9)
-                badge:SetPoint("BOTTOMRIGHT", t, "BOTTOMRIGHT", 3, -2)
+                badge:SetPoint("BOTTOMRIGHT", mk.sign, "CENTER", 11, -10)
                 badge:SetTexture(loot)
             end
-            shown[n] = { t = t, badge = badge }
+            shown[n] = { mk = mk, badge = badge }
         end
         local pl = box3:CreateTexture(nil, "OVERLAY", nil, 2)
         pl:SetTexture(ICONS .. "player.png"); pl:SetSize(22, 22)
@@ -532,12 +565,11 @@ local function buildGUI()
                     ok = (rp > 0 and dp <= rp * rp) or (rm > 0 and dm <= rm * rm)
                 end
                 local e = shown[n]
-                e.t:SetShown(ok and true or false)
+                -- plain, drop and dungeon quests get our ! with its outline; PvP and repeatable keep Questie's
+                local ours = ns.DB.colorAvail and (q[3] == "n" or q[3] == "d" or q[3] == "g") and "bang" or nil
+                local key = questKey(q[4] == -99 and -(gr + 1) or q[4])
+                e.mk.set(ok, ours, key, key == "trivial", pathOf[q[3]], ns.DB.markForever and NEW[n])
                 if e.badge then e.badge:SetShown(ok and true or false) end
-                local key = ns.DB.colorAvail and questKey(q[4] == -99 and -(gr + 1) or q[4]) or nil
-                local path = key and avail or pathOf[q[3]]
-                if path then e.t:SetTexture(path) end
-                paintAvail(e.t, key)
             end
         end
     end
@@ -559,20 +591,24 @@ local function buildGUI()
         "Quests done inside a dungeon or raid.", nil, avail, true)
 
     makeHeader(p, X, -PH - 216, "Look")
-    check(p, -PH - 238, "colorAvail", "Color the ! by difficulty",
-        "Like quest titles: grey (easy) to red (hard).")
+    check(p, -PH - 238, "colorAvail", "Outline the ! and ? by difficulty",
+        "A colored outline like quest titles: grey (easy) to red (hard). A green ? : turn the quest in before it goes grey.")
+    check(p, -PH - 264, "markForever", "Mark quests new in Forever",
+        "A small badge on the ! and ? of quests that are not in the original Classic.", nil, ICONS .. "forever.png")
+    -- samples: the ! in the five difficulty colors, then a turn-in ?
     local BAND_STEPS = { -99, -3, 0, 3, 5 }   -- grey, green, yellow, orange, red
+    local complete = questieIcon(Questie and Questie.ICON_TYPE_COMPLETE)
     local samples = {}
-    for i = 1, #BAND_STEPS do
-        local t = p:CreateTexture(nil, "ARTWORK")
-        t:SetSize(20, 20)
-        t:SetPoint("TOPLEFT", X + CW - 22 * (#BAND_STEPS - i + 1), -PH - 240)
-        if avail then t:SetTexture(avail) end
-        samples[i] = t
+    for i = 1, #BAND_STEPS + 1 do
+        samples[i] = marker(p, 18, X + CW - 26 * (#BAND_STEPS + 1 - i) - 12, -PH - 249)
     end
     widgets[#widgets + 1] = function()
-        for i, t in ipairs(samples) do
-            paintAvail(t, ns.DB.colorAvail and questKey(BAND_STEPS[i] == -99 and -(greenRange() + 1) or BAND_STEPS[i]) or nil)
+        local gr = greenRange()
+        for i, mk in ipairs(samples) do
+            local isAsk = i > #BAND_STEPS
+            local step = isAsk and -3 or BAND_STEPS[i]
+            local key = questKey(step == -99 and -(gr + 1) or step)
+            mk.set(true, ns.DB.colorAvail and (isAsk and "ask" or "bang") or nil, key, key == "trivial", isAsk and complete or avail, false)
         end
     end
 

@@ -30,7 +30,6 @@ local refocusOthers = ns.refocusOthers
 local reportError = ns.reportError
 local restoreAll = ns.restoreAll
 local setBlobShown = ns.setBlobShown
-local tintAvail = ns.tintAvail
 local updateLayer = ns.updateLayer
 local updateState = ns.updateState
 
@@ -141,7 +140,7 @@ local function scanZone()
     local plevel = UnitLevel("player") or 1
     eachFrame(function(f, d)
         hookFrame(f)
-        tintAvail(f, plevel)
+        ns.markIcon(f, plevel)
         local t = d.Type
         local other = f.UiMapID ~= S.viewMap
         if other and ns.DB.hideOtherZones and not ns.insideView(f) then
@@ -264,7 +263,7 @@ local function scanContinent()
     local plevel = UnitLevel("player") or 1
     eachFrame(function(f, d)
         hookFrame(f)
-        tintAvail(f, plevel)
+        ns.markIcon(f, plevel)
         local t = d.Type
         if dungeonHide(f) then
             f._qqHide = true
@@ -433,7 +432,6 @@ end
 
 local function miniRestore()
     for f in pairs(miniHidden) do miniHide(f, false) end
-    for _, f in ipairs(miniList) do if f._qqTint then tintAvail(f, 1, true) end end
     if mini then mini:Hide() end
 end
 
@@ -535,7 +533,6 @@ function QQ:MinimapTick()
     for _, f in ipairs(miniList) do
         local d = f.data
         if f.miniMapIcon and d then
-            tintAvail(f, plevel)
             local hide, near, onMap, mx, my = false, true, false, 0, 0
             local wx, wy, inst = ns.HBD:GetWorldCoordinatesFromZone(f.x / 100, f.y / 100, f.UiMapID)
             local dist

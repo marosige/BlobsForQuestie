@@ -8,12 +8,13 @@ An unofficial addon for **Questie** that declutters the map: far quest objective
 
 - **Blobs instead of far icons:** quest objectives far from you turn into soft blobs that follow their spawn points, so the map stays readable with a full quest log. Walking mobs include their whole patrol route.
 - **Questie's own icons where it matters:** near your character and around the mouse pointer you see the normal Questie icons, with Questie's own tooltips. Both distances are yours to set. You can also show all icons everywhere.
-- **Colors:** blobs can be colored by quest level (like quest titles in the game), by objective (kill, loot, other) or all in one color. Loot can be shaded by drop rate in three colors you choose, so you see where farming is slow.
+- **Colors:** blobs can be colored by quest level (like quest titles in the game), by objective (kill blue, other white, loot) or all in one color. Loot is shaded by drop rate like a traffic light (green good, yellow mid, red poor), so you see where farming is slow. All colors can be changed.
 - **Grouping:** one blob per quest, unified blobs, or unified blobs by color.
 - **Continent and world map:** one blob per zone.
 - **Minimap:** optional blobs on the minimap too.
-- **Available quests:** show them everywhere or only nearby, leave out quests started by a dropped item, PvP, repeatable and dungeon quests, and color the ! by difficulty.
-- **Filters:** hide the icons of neighbouring zones (quest icons and Questie's town icons: flight masters, innkeepers, trainers...) and of dungeon quests that Questie draws at dungeon entrances. With the neighbouring zones shown, their objectives become blobs too, like the zone's own.
+- **Available quests:** show them everywhere or only nearby, and leave out quests started by a dropped item, PvP, repeatable and dungeon quests.
+- **Quest markers:** the ! and the turn-in ? can get an outline in the color of their difficulty, like quest titles (a green ? : turn it in before it goes grey). Quests new in WoW Classic Forever get a small badge. The markers are the addon's own pictures and sit above Questie's icon, so another addon's tint does not cover them.
+- **Zone maps:** show the neighbouring zones as well (their quests as blobs and icons, like your own zone's, and Questie's town icons) or leave them empty. A city always shows in its own zone. The dungeon quest icons Questie draws at dungeon entrances can be shown or left out too.
 - **Mouse over:** point at a Questie icon to see that objective in every blob. Hold Shift to show only it, with no other icons, quest givers or turn-ins. The same works in the quest log: hold Shift and point at a quest to show only its icons on the map. Opening a quest's details does the same, and Shift then shows everything again. Shift + click on an icon opens that quest's details. All three can be switched on the Questie icons tab. Blobs always stay.
 
 ## Install
@@ -35,7 +36,7 @@ Requires WoW Classic Forever and Questie. Copy the `BlobsForQuestie` folder into
 
 ## Files
 
-`Core` (settings, hiding rules), `Geometry` (blob shapes), `Layer` (drawing, mouse over), `Scan` (what to show, minimap), `Widgets` and `Settings` (settings window), `MapButtons`, `Commands`, `Main` (startup). They share one table, so the load order in the `.toc` matters.
+`Core` (settings, hiding rules), `Geometry` (blob shapes), `Layer` (drawing, mouse over), `Markers` (the ! and ? markers), `Scan` (what to show, minimap), `Widgets` and `Settings` (settings window), `MapButtons`, `Commands`, `Main` (startup). They share one table, so the load order in the `.toc` matters.
 
 ## Notes
 

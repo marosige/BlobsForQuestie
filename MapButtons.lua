@@ -138,8 +138,8 @@ local function buildPanel()
         "Available quests that start from a dropped item are shown.", "Available quests that start from a dropped item are hidden.",
         function() return not ns.DB.hideItemStarts end, function() ns.DB.hideItemStarts = not ns.DB.hideItemStarts end)
 
-    -- 4: blob colour, steps through the three modes. Its picture says which, without knowing the colours:
-    -- a plain blob (one color), rising bars (by quest level), Questie's kill and loot icons (by objective)
+    -- 4: blob colour, steps through the three modes. Its picture is always a blob in the mode's colours, with a
+    -- sign for what they mean: none (one color), a ! (by quest level), Questie's loot bag (by objective)
     do
         local MODES = { "single", "level", "kind" }
         local NAMES = { single = "One color", level = "By quest level", kind = "By objective" }
@@ -147,27 +147,23 @@ local function buildPanel()
         b:SetSize(20, 20)
         b:SetPoint("LEFT", px(4), 0)
         panelBtns[4] = b
-        local plain = b:CreateTexture(nil, "ARTWORK")
-        plain:SetTexture(ICONS .. "blob.png")
-        plain:SetSize(21, 14)
-        plain:SetPoint("LEFT", -1, 0)
+        -- the blob in the mode's colours (two halves, each a gradient), its outline, and a sign on top
+        local halves = {}
+        for k = 1, 2 do
+            local t = b:CreateTexture(nil, "ARTWORK")
+            t:SetTexture(ICONS .. "blob.png")
+            t:SetSize(10.5, 14)
+            t:SetPoint("LEFT", -1 + (k - 1) * 10.5, 0)
+            t:SetTexCoord((k - 1) / 2, k / 2, 0, 1)
+            halves[k] = t
+        end
         local line = b:CreateTexture(nil, "OVERLAY")
         line:SetTexture(ICONS .. "blobline.png")
-        line:SetAllPoints(plain)
+        line:SetSize(21, 14)
+        line:SetPoint("LEFT", -1, 0)
         line:SetVertexColor(1, 0.95, 0.8, 0.9)
-        local bars = {}   -- low, your level, high: like a difficulty meter
-        for k = 1, 3 do
-            local t = b:CreateTexture(nil, "ARTWORK")
-            t:SetSize(4, 3 + k * 4)
-            t:SetPoint("BOTTOMLEFT", 2 + (k - 1) * 6, 3)
-            bars[k] = t
-        end
-        local killIc = b:CreateTexture(nil, "ARTWORK")
-        killIc:SetSize(14, 14)
-        killIc:SetPoint("TOPLEFT", -1, 1)
-        local lootIc = b:CreateTexture(nil, "OVERLAY")
-        lootIc:SetSize(14, 14)
-        lootIc:SetPoint("BOTTOMRIGHT", 1, -1)
+        local sign = b:CreateTexture(nil, "OVERLAY", nil, 1)   -- by quest level: our !, by objective: Questie's loot bag
+        sign:SetPoint("CENTER", 0, 0)
         b:RegisterForClicks("LeftButtonUp", "RightButtonUp")
         b:SetScript("OnClick", function(_, button)
             local cur = 1
@@ -187,22 +183,22 @@ local function buildPanel()
         b:SetScript("OnLeave", function() GameTooltip:Hide() end)
         panelChecks[#panelChecks + 1] = function()
             local m = ns.DB.colorMode
-            local kill, loot = questieIcon(1), questieIcon(2)
-            if kill then killIc:SetTexture(kill) end
-            if loot then lootIc:SetTexture(loot) end
-            local icons = m == "kind" and kill and loot
-            killIc:SetShown(icons and true or false)
-            lootIc:SetShown(icons and true or false)
-            for k, t in ipairs(bars) do
-                local c = questColor(({ -3, 0, 5 })[k])
-                t:SetColorTexture(c[1], c[2], c[3], 0.95)
-                t:SetShown(m == "level")
+            local cols
+            if m == "level" then cols = { questColor(-3), questColor(0), questColor(5) }
+            elseif m == "kind" then cols = { ns.DB.colors.kill, ns.DB.colors.loot, ns.DB.colors.other }
+            else cols = { ns.DB.colorAll, ns.DB.colorAll, ns.DB.colorAll } end
+            for k, t in ipairs(halves) do
+                local c1, c2 = cols[k], cols[k + 1]
+                if not (m ~= "single" and hGradient(t, c1, c2, 0.95)) then t:SetVertexColor(c1[1], c1[2], c1[3], 0.95) end
             end
-            -- one color (or Questie's icons not there): a plain blob in that colour
-            local blob = m == "single" or (m == "kind" and not icons)
-            local c = m == "kind" and ns.DB.colors.kill or ns.DB.colorAll
-            plain:SetVertexColor(c[1], c[2], c[3], 0.95)
-            plain:SetShown(blob); line:SetShown(blob)
+            local loot = questieIcon(2)
+            if m == "level" then
+                sign:SetTexture(ICONS .. "bang.png"); sign:SetSize(17, 17); sign:Show()
+            elseif m == "kind" and loot then
+                sign:SetTexture(loot); sign:SetSize(13, 13); sign:Show()
+            else
+                sign:Hide()
+            end
         end
     end
 

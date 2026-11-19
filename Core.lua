@@ -37,7 +37,8 @@ local DEFAULTS = {
     hidePvPQuests = false, -- hide the available PvP quests
     hideRepeatable = false, -- hide the available repeatable quests
     hideDungeonAvail = false, -- hide the available dungeon and raid quests
-    colorAvail = false,    -- color the available-quest icons by difficulty (grey .. red)
+    colorAvail = false,    -- the ! and ? get an outline in the quest-title colour of their difficulty (see Markers)
+    markForever = true,    -- a small infinity badge on the ! and ? of quests that are new in WoW Classic Forever
     blobsWorld = true,     -- blobs on the continent / world maps
     minimapBlobs = false,  -- the same rules (and blobs) on the minimap
     groupMode = "all",     -- "quest" (one blob per quest objective), "all" (one unified blob) or "color" (one unified blob per color)
@@ -45,8 +46,8 @@ local DEFAULTS = {
     lootByDrop = true,     -- "kind" colours: loot changes to its low-rate color where the drop rate is low
     colorAll = { 0.10, 0.28, 0.70 },   -- the "single" colour (dark blue, like the game's own quest blobs)
     -- the "kind" colours. Loot by drop rate like a traffic light: loot = good (80% and up, green), lootMid (yellow),
-    -- lootLow = poor (under 30%, red); kill and other in colours of their own (purple, blue), never read as a rate
-    colors = { kill = { 0.62, 0.30, 0.92 }, loot = { 0.20, 0.75, 0.25 }, lootMid = { 0.98, 0.84, 0.12 }, lootLow = { 0.86, 0.14, 0.14 }, other = { 0.15, 0.55, 0.95 } },
+    -- lootLow = poor (under 30%, red); kill blue and other white, never read as a rate
+    colors = { kill = { 0.15, 0.55, 0.95 }, loot = { 0.20, 0.75, 0.25 }, lootMid = { 0.98, 0.84, 0.12 }, lootLow = { 0.86, 0.14, 0.14 }, other = { 0.95, 0.95, 0.95 } },
     hideDungeonQuests = true,    -- hide quest icons drawn at dungeon entrances for things inside the dungeon
     hideOtherZones = true, -- zone map: hide the Questie icons of neighbouring zones
 }
@@ -101,11 +102,11 @@ local function initDB()
     if ns.DB.colorMode ~= "single" and ns.DB.colorMode ~= "level" and ns.DB.colorMode ~= "kind" then ns.DB.colorMode = DEFAULTS.colorMode end
     -- earlier default kind colours (never changed by the player) move to the current ones
     local OLD = {
-        kill = { { 0.60, 0.32, 0.95 }, { 0.80, 0.22, 0.22 } },
+        kill = { { 0.60, 0.32, 0.95 }, { 0.80, 0.22, 0.22 }, { 0.62, 0.30, 0.92 } },                          -- last: purple until 1.0.1
         loot = { { 0.28, 0.52, 1.00 }, { 0.20, 0.45, 0.92 }, { 0.10, 0.62, 0.98 }, { 0.98, 0.84, 0.12 } },   -- last: yellow until 1.0.1
         lootMid = { { 0.98, 0.52, 0.10 } },                                                                  -- orange until 1.0.1
         lootLow = { { 0.60, 0.15, 0.85 } },
-        other = { { 0.25, 0.80, 0.65 }, { 0.22, 0.68, 0.32 } },                                              -- last: green until 1.0.1
+        other = { { 0.25, 0.80, 0.65 }, { 0.22, 0.68, 0.32 }, { 0.15, 0.55, 0.95 } },                       -- green until 1.0.1, then blue
     }
     for k, list in pairs(OLD) do
         local c = ns.DB.colors[k]
@@ -256,7 +257,6 @@ local function availForced(d)
     return false
 end
 
--- Available-quest icons coloured by difficulty: the icon is desaturated and tinted with the quest-title colour.
 -- Quest difficulty colours: the game's own (the colour of a quest title), with the same level steps.
 local function greenRange()
     local gr
@@ -276,75 +276,22 @@ local function questKey(diff)   -- diff = quest level - player level
     elseif -diff <= greenRange() then return "standard" end
     return "trivial"
 end
-local function questColor(diff)
-    local key = questKey(diff)
+local function keyColor(key)   -- the colour of a difficulty key ("trivial" .. "impossible")
     local c = qcol[key]
     if not c then
         local t = QuestDifficultyColors and QuestDifficultyColors[key]
-        c = (type(t) == "table" and type(t.r) == "number") and { t.r, t.g, t.b } or QCOL_FALLBACK[key]
+        c = (type(t) == "table" and type(t.r) == "number") and { t.r, t.g, t.b } or QCOL_FALLBACK[key] or QCOL_FALLBACK.difficult
         qcol[key] = c
     end
     return c
 end
-local function levelBand(d, plevel)   -- the difficulty key of an available quest (nil = level unknown)
+local function questColor(diff) return keyColor(questKey(diff)) end
+local function levelBand(d, plevel)   -- the difficulty key of a quest icon (nil = level unknown)
     local q = d.QuestData
     local lv = q and q.level
     if type(lv) ~= "number" then return nil end
     if lv <= 0 then return "difficult" end   -- scaling quests
     return questKey(lv - plevel)
-end
-
--- How the yellow "!" is coloured for each difficulty. Filtering the yellow picture keeps the colours bright;
--- yellow stays exactly as it is, only grey needs the picture made grey first.
-local AVAIL_TINT = {
-    impossible = { 1.00, 0.12, 0.50 }, verydifficult = { 1.00, 0.59, 1.00 }, difficult = { 1, 1, 1 },
-    standard = { 0.25, 0.88, 1.00 }, trivial = { 0.65, 0.65, 0.65, grey = true },
-}
-local function paintAvail(tex, key, a)
-    local t = AVAIL_TINT[key]
-    if not t then tex:SetDesaturated(false); tex:SetVertexColor(1, 1, 1, a or 1); return end
-    tex:SetDesaturated(t.grey and true or false)
-    tex:SetVertexColor(t[1], t[2], t[3], a or 1)
-end
-
-local function tintAvail(f, plevel, off)
-    local tex = f.texture
-    if type(tex) ~= "table" or type(tex.GetVertexColor) ~= "function" then return end
-    local d = f.data
-    if ns.DB.colorAvail and not off and d and d.Type == "available" and (not f.miniMapIcon or (ns.DB.minimapBlobs and ns.DB.enabled)) then
-        local c = levelBand(d, plevel)
-        if c then
-            local _, _, _, a = tex:GetVertexColor()
-            -- every available quest is coloured from the plain yellow "!" (a PvP, repeatable or grey "!" would
-            -- give darker shades); Questie's own picture is remembered and given back later
-            local plain = Questie and Questie.usedIcons and Questie.usedIcons[Questie.ICON_TYPE_AVAILABLE]
-            if plain and tex.GetTexture then
-                local cur = tex:GetTexture()
-                if cur ~= f._qqSetTex then f._qqTex = cur end
-                tex:SetTexture(plain)
-                f._qqSetTex = tex:GetTexture()
-            end
-            paintAvail(tex, c, a)
-            if f.miniMapIcon and type(tex.r) == "number" then
-                -- Questie's minimap fade sets the colour from these fields: keep the tint in them
-                if not f._qqRGB then f._qqRGB = { tex.r, tex.g, tex.b } end
-                local t = AVAIL_TINT[c] or { 1, 1, 1 }
-                tex.r, tex.g, tex.b = t[1], t[2], t[3]
-            end
-            f._qqTint = true
-            return
-        end
-    end
-    if f._qqTint then   -- not (or no longer) tinted: give Questie's own look back
-        f._qqTint = nil
-        local _, _, _, a = tex:GetVertexColor()
-        -- Questie's picture back, unless Questie has drawn something else in this frame since
-        if f._qqTex and tex.GetTexture and tex:GetTexture() == f._qqSetTex then tex:SetTexture(f._qqTex) end
-        f._qqTex, f._qqSetTex = nil, nil
-        if f._qqRGB then tex.r, tex.g, tex.b = f._qqRGB[1], f._qqRGB[2], f._qqRGB[3]; f._qqRGB = nil end
-        tex:SetDesaturated(false)
-        tex:SetVertexColor(1, 1, 1, a or 1)
-    end
 end
 
 local function availHide(f)
@@ -499,10 +446,7 @@ end
 local forgetHooks = {}   -- other files forget what they keep per frame here (the minimap)
 local function forgetFrame(f)
     if f._qqAlpha ~= nil then f:SetAlpha(f._qqAlpha); f:EnableMouse(true) end
-    local tex = f.texture
-    if f._qqTint and type(tex) == "table" and tex.SetDesaturated then tex:SetDesaturated(false) end
     f._qqAlpha, f._qqHid, f._qqHide, f._qqQH, f._qqCur, f._qqwx, f._qqtv = nil, nil, nil, nil, nil, nil, nil
-    f._qqTint, f._qqTex, f._qqSetTex, f._qqRGB = nil, nil, nil, nil
     f._qqShowHook = nil   -- Unload cleared the OnShow script, and our hook with it
     for _, fn in ipairs(forgetHooks) do fn(f) end
     QQ.unloads = (QQ.unloads or 0) + 1   -- the map ticker rescans once Questie has redrawn icons
@@ -586,7 +530,7 @@ local function eachManual(fn)
 end
 
 local function restoreFrame(f)
-    if f._qqTint then tintAvail(f, 1, true) end
+    if ns.unmark then ns.unmark(f) end
     if f._qqHid or f._qqHide ~= nil then
         f._qqHide = nil
         f._qqHid = nil
@@ -628,8 +572,8 @@ ns.availForced = availForced
 ns.greenRange = greenRange
 ns.questKey = questKey
 ns.questColor = questColor
-ns.paintAvail = paintAvail
-ns.tintAvail = tintAvail
+ns.keyColor = keyColor
+ns.levelBand = levelBand
 ns.availHide = availHide
 ns.dungeonHide = dungeonHide
 ns.wantHide = wantHide
