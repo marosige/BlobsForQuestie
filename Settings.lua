@@ -352,7 +352,7 @@ local function buildGUI()
         { "all", "Unified", "Objectives close to each other share one blob. Each part of it keeps its own color, blending into the next." },
         { "color", "Unified by color", "Objectives of the same color share one blob, so every color forms blobs of its own." },
     }, function() return ns.DB.groupMode end, function(v) ns.DB.groupMode = v end)
-    makeHeader(p, X, -PH - 264, "Other maps")
+    makeHeader(p, X, -PH - 264, "Blobs on maps")
     check(p, -PH - 286, "blobsWorld", "Blobs on continent and world maps",
         "Shows one blob for each zone on the continent and world maps. When off, these maps show no blobs.", redraw)
     check(p, -PH - 312, "minimapBlobs", "Blobs on the minimap",
@@ -422,7 +422,7 @@ local function buildGUI()
         scene(CW * 0.25, "player.png", "showNearPlayer", "objPlayer", "around your character")
         scene(CW * 0.75, "cursor.png", "showNearMouse", "objMouse", "around the mouse pointer")
     end
-    makeHeader(p, X, -PH - 20, "Show Questie's icons instead of blobs")
+    makeHeader(p, X, -PH - 20, "Show Questie icons on blobs")
     local HALF = floor((CW - 28 - 24) / 2)
     -- w: width of the label (and of the clickable area right of the box)
     local function plainCheck(y, key, label, tip, after, w)
@@ -435,9 +435,10 @@ local function buildGUI()
     plainCheck(-PH - 42, "revealAll", "Everywhere",
         "Questie's icons show all over the map. The blobs stay underneath them.")
     -- each of the two has its own radius, in line with its checkbox
-    local SLX = X + 196
-    local SLW = CW - 196 - 52
-    local LW = SLX - X - 24 - 6   -- the checkbox (and its label) ends before the slider, or it takes the slider's clicks
+    local RANGE_W = 46   -- the "Range" label in front of each slider
+    local SLX = X + 196 + RANGE_W
+    local SLW = CW - 196 - RANGE_W - 52
+    local LW = SLX - RANGE_W - X - 24 - 6   -- the checkbox (and its label) ends before the slider, or it takes the slider's clicks
     local cbP = plainCheck(-PH - 68, "showNearPlayer", "Near your character",
         "Within the radius around your character you see Questie's icons; farther away, blobs.", nil, LW)
     local cbM = plainCheck(-PH - 94, "showNearMouse", "Near the mouse pointer",
@@ -447,26 +448,34 @@ local function buildGUI()
             function(v) return format("%d%%", v) end,
             function() return ns.DB[key] end, function(v) ns.DB[key] = v end, true)
         sl:SetFrameLevel((cbP:GetFrameLevel() or 1) + 2)   -- above the checkboxes
-        widgets[#widgets + 1] = function() setActive(sl, ns.DB[flag] and not ns.DB.revealAll and true or false) end
+        local lbl = p:CreateFontString(nil, "OVERLAY", "GameFontNormal")
+        lbl:SetPoint("RIGHT", sl, "LEFT", -8, 0)
+        lbl:SetText("Range")
+        widgets[#widgets + 1] = function()
+            local on = ns.DB[flag] and not ns.DB.revealAll and true or false
+            setActive(sl, on)
+            lbl:SetAlpha(on and 1 or 0.35)
+        end
         return sl
     end
     radius(-PH - 68, "objPlayer", "How far from your character, in percent of the map's width.", "showNearPlayer")
     radius(-PH - 94, "objMouse", "How far from the mouse pointer, in percent of the map's width.", "showNearMouse")
 
     -- what to hide, then what happens when you point at something
-    makeHeader(p, X, -PH - 134, "On zone maps, also show")
-    check(p, -PH - 156, "hideOtherZones", "Questie icons of neighbouring zones",
-        "A zone map also shows the quests of the zones around it, as blobs and icons just like your own zone, and Questie's town icons there. When off, those parts of the map stay empty. A city always shows in the zone it lies in. Blizzard's own map icons are not affected.",
-        nil, nil, true)
-    check(p, -PH - 182, "hideDungeonQuests", "Questie icons of dungeon quests at the entrance",
-        "Questie draws the objectives of dungeon quests at the dungeon's entrance on the outdoor map. Turn this on to keep those icons.", nil, nil, true)
+    makeHeader(p, X, -PH - 142, "Hide on zone maps")
+    check(p, -PH - 164, "hideOtherZones", "Questie icons of neighbouring zones",
+        "Hides the quests of the zones around the zone you are looking at, blobs and icons alike, and Questie's town icons there. Your own zone is not affected, and a city always shows in the zone it lies in. Blizzard's own map icons stay.")
+    check(p, -PH - 190, "hideDungeonQuests", "Questie icons of dungeon quests at the entrance",
+        "Questie draws the objectives of dungeon quests at the dungeon's entrance on the outdoor map. Turn this on to hide those icons.")
 
-    makeHeader(p, X, -PH - 222, "Focus on a quest")
-    check(p, -PH - 244, "hoverShow", "Pointing at an icon shows all spots of that objective",
+    makeHeader(p, X, -PH - 238, "Focus on a quest")
+    check(p, -PH - 260, "hoverShow", "Pointing at an icon shows all spots of that objective",
         "When you point at a Questie icon, every spot of the same objective shows its icon too, even far away inside the blobs.", function() if QQ.ClearCursor then QQ:ClearCursor() end end)
-    check(p, -PH - 270, "shiftFocus", "Hold Shift to show only one quest",
-        "Hold Shift while pointing at a Questie icon on the map, or at a quest in the quest log: only that quest's icons stay. All other icons, quest givers and turn-ins hide; the blobs stay. Shift + click on an icon opens the quest's details.", function() if QQ.ClearCursor then QQ:ClearCursor() end end)
-    check(p, -PH - 296, "logDetails", "Show only the quest whose details are open",
+    check(p, -PH - 286, "shiftFocus", "Hold Shift to show only the quest you point at",
+        "Hold Shift while pointing at a Questie icon on the map, or at a quest in the quest log: only that quest's icons stay. All other icons, quest givers and turn-ins hide; the blobs stay. Let go of Shift and everything shows again.", function() if QQ.ClearCursor then QQ:ClearCursor() end end)
+    check(p, -PH - 312, "shiftClick", "Shift + click an objective to open its quest",
+        "Hold Shift and click a Questie icon of a quest objective or turn-in on the map: the quest's details open in the quest log.")
+    check(p, -PH - 338, "logDetails", "Show only the quest whose details are open",
         "While a quest's details are open in the quest log, the map shows only that quest's icons. Hold Shift to see all icons again.")
 
     -- 3: Available quests -------------------------------------------------------------------
@@ -579,7 +588,7 @@ local function buildGUI()
         { true, "Only nearby", "Available quests show only near your character or the mouse pointer, like objectives (see the Questie icons tab). They are hidden on continent and world maps." },
     }, function() return ns.DB.hideFarAvail and true or false end, function(v) ns.DB.hideFarAvail = v end)
 
-    makeHeader(p, X, -PH - 92, "Include these quests")
+    makeHeader(p, X, -PH - 92, "Show these quest types")
     check(p, -PH - 114, "hideItemStarts", "Quests started by a dropped item",
         "Quests that start from an item a monster drops or that you find in an object.", nil,
         questieIcon(Questie and Questie.ICON_TYPE_LOOT), true)

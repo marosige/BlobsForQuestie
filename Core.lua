@@ -29,6 +29,7 @@ local DEFAULTS = {
     objMouse = 10,         -- % of the map width around the mouse cursor
     hoverShow = true,      -- pointing at an icon: that objective shows its icons in every blob
     shiftFocus = true,     -- Shift while pointing (icon on the map, quest in the log): only that objective / quest shows
+    shiftClick = true,     -- Shift + click on an objective / turn-in icon opens that quest's details in the quest log
     logDetails = true,     -- a quest's details open in the quest log: only that quest shows on the map
     panelCollapsed = false, -- the map buttons are folded to the arrow and the addon switch
     hideFarAvail = false,  -- available quests follow the same rules as objectives; off = always shown
@@ -480,7 +481,7 @@ local function hookFrame(f)
             f:HookScript("OnClick", function(self, button)
                 local d = self.data
                 if button ~= "LeftButton" or self.miniMapIcon or type(d) ~= "table" or type(d.Id) ~= "number" then return end
-                if not (ns.DB and ns.DB.enabled and ns.DB.shiftFocus and IsShiftKeyDown and IsShiftKeyDown()) then return end
+                if not (ns.DB and ns.DB.enabled and ns.DB.shiftClick and IsShiftKeyDown and IsShiftKeyDown()) then return end
                 if d.Type == "available" or d.Type == "manual" or not d.QuestData then return end
                 if ChatEdit_GetActiveWindow and ChatEdit_GetActiveWindow() then return end   -- Questie links the quest there
                 if InCombatLockdown and InCombatLockdown() then return end

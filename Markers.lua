@@ -105,6 +105,9 @@ local function markIcon(f, plevel)
         glyph, grey = glyphOf(d)
         key = glyph and ns.levelBand(d, plevel)
         if not key then glyph = nil end   -- level unknown: Questie's picture stays
+        -- A grey quest (by the game's title colours) gets a grey ! as well, not a yellow one in a grey outline:
+        -- Questie's own idea of "too low" can differ from the game's.
+        if glyph == "bang" and key == "trivial" then grey = true end
     end
     local badge = ns.DB.markForever and isForeverQuest(d.Id)
     if not glyph and not badge then
