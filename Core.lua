@@ -565,21 +565,42 @@ local function eachFrame(fn)
     end
 end
 
-local function restoreAll()
-    for _, tbl in ipairs({ ns.QuestieMap and ns.QuestieMap.questIdFrames or {}, ns.QuestieMap and ns.QuestieMap.manualFrames or {} }) do
-        for _, names in pairs(tbl) do
-            for _, name in pairs(names) do
-                local f = _G[name]
-                if f and f._qqTint then tintAvail(f, 1, true) end
-                if f and (f._qqHid or f._qqHide ~= nil) then
-                    f._qqHide = nil
-                    f._qqHid = nil
-                    if f.hidden and not questieHides(f, true) then f:FakeShow() end
-                    if f._qqAlpha ~= nil then f:SetAlpha(f._qqAlpha); f:EnableMouse(true); f._qqAlpha = nil end
+-- Questie's town icons (flight masters, innkeepers, trainers...): manualFrames[type][npc or object id] = { frame names }
+local function eachManual(fn)
+    local mf = ns.QuestieMap and ns.QuestieMap.manualFrames
+    if type(mf) ~= "table" then return end
+    for _, byId in pairs(mf) do
+        if type(byId) == "table" then
+            for _, names in pairs(byId) do
+                if type(names) == "table" then
+                    for _, name in pairs(names) do
+                        local f = _G[name]
+                        if f then fn(f) end
+                    end
                 end
             end
         end
     end
+end
+
+local function restoreFrame(f)
+    if f._qqTint then tintAvail(f, 1, true) end
+    if f._qqHid or f._qqHide ~= nil then
+        f._qqHide = nil
+        f._qqHid = nil
+        if f.hidden and not questieHides(f, true) then f:FakeShow() end
+        if f._qqAlpha ~= nil then f:SetAlpha(f._qqAlpha); f:EnableMouse(true); f._qqAlpha = nil end
+    end
+end
+
+local function restoreAll()
+    for _, names in pairs(ns.QuestieMap and ns.QuestieMap.questIdFrames or {}) do
+        for _, name in pairs(names) do
+            local f = _G[name]
+            if f then restoreFrame(f) end
+        end
+    end
+    eachManual(restoreFrame)
     QQ.blobs = nil
     if ns.heat then
         ns.heat._dsig = nil
@@ -617,4 +638,5 @@ ns.hookFrame = hookFrame
 ns.hookUnload = hookUnload
 ns.forgetHooks = forgetHooks
 ns.eachFrame = eachFrame
+ns.eachManual = eachManual
 ns.restoreAll = restoreAll

@@ -288,22 +288,19 @@ end
 
 -- Flight masters, innkeepers, trainers... (Questie's manual icons): on a zone map the ones of other zones go too.
 local function scanManual()
-    if not (ns.QuestieMap and ns.QuestieMap.manualFrames) then return end
     local want0 = ns.DB.hideOtherZones and not S.continent and S.viewMap
-    for _, names in pairs(ns.QuestieMap.manualFrames) do
-        for _, name in pairs(names) do
-            local f = _G[name]
-            if f and f.data and not f.miniMapIcon and f.UiMapID and f.FakeHide then
-                if want0 and not ns.insideView(f) then
-                    f._qqHide = true
-                    applyHide(f, true, true)
-                elseif f._qqHid then
-                    f._qqHide = nil
-                    applyHide(f, false, true)
-                end
+    ns.eachManual(function(f)
+        if f.data and not f.miniMapIcon and f.UiMapID and f.FakeHide then
+            ns.hookUnload(f)   -- Questie recycles these frames too: forget our hiding when it does
+            if want0 and not ns.insideView(f) then
+                f._qqHide = true
+                applyHide(f, true, true)
+            elseif f._qqHid then
+                f._qqHide = nil
+                applyHide(f, false, true)
             end
         end
-    end
+    end)
 end
 
 -- Questie asks at the start which objective style to use. With the Blizzard style Questie draws no objectives,

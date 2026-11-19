@@ -105,6 +105,7 @@ local function setup()
                 for _ in pairs(names) do frames = frames + 1 end
             end
         end
+        ns.eachManual(function() frames = frames + 1 end)   -- town icons Questie added or removed
         local px, py = 0, 0
         local x, y = ns.HBD:GetPlayerZonePosition()
         if x and y then px, py = floor(x * 200), floor(y * 200) end

@@ -70,22 +70,24 @@ function ns.debugReport()
         end
         line("viewed map: " .. mapName(view))
         local per, order = {}, {}
-        for _, group in ipairs({ ns.QuestieMap.questIdFrames or {}, ns.QuestieMap.manualFrames or {} }) do
-            for _, names in pairs(group) do
-                for _, name in pairs(names) do
-                    local f = _G[name]
-                    if f and f.data and not f.miniMapIcon and f.UiMapID and f.UiMapID ~= view then
-                        local e = per[f.UiMapID]
-                        if not e then e = { n = 0, hid = 0, types = {} }; per[f.UiMapID] = e; order[#order + 1] = f.UiMapID end
-                        e.n = e.n + 1
-                        if ns.insideView(f) then e.inside = (e.inside or 0) + 1 end
-                        if f.hidden or f._qqHid then e.hid = e.hid + 1 end
-                        local t = tostring(f.data.Type)
-                        e.types[t] = (e.types[t] or 0) + 1
-                    end
-                end
+        local function count(f)
+            if f.data and not f.miniMapIcon and f.UiMapID and f.UiMapID ~= view then
+                local e = per[f.UiMapID]
+                if not e then e = { n = 0, hid = 0, types = {} }; per[f.UiMapID] = e; order[#order + 1] = f.UiMapID end
+                e.n = e.n + 1
+                if ns.insideView(f) then e.inside = (e.inside or 0) + 1 end
+                if f.hidden or f._qqHid then e.hid = e.hid + 1 end
+                local t = tostring(f.data.Type)
+                e.types[t] = (e.types[t] or 0) + 1
             end
         end
+        for _, names in pairs(ns.QuestieMap.questIdFrames or {}) do
+            for _, name in pairs(names) do
+                local f = _G[name]
+                if f then count(f) end
+            end
+        end
+        ns.eachManual(count)
         table.sort(order)
         local parts = {}
         for _, id in ipairs(order) do

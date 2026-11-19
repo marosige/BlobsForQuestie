@@ -459,7 +459,7 @@ local function buildGUI()
     end
     makeHeader(p, X, -PH - 118, "Hide Questie icons", COLW)
     colCheck(X, -PH - 140, "hideOtherZones", "From neighbouring zones",
-        "Zone maps show only the icons of that zone, not those of the zones around it. Cities inside the zone stay.")
+        "Zone maps show only the icons of that zone, not those of the zones around it: quest icons and Questie's town icons (flight masters, innkeepers, trainers...). Cities inside the zone stay. Blizzard's own map icons are not affected.")
     colCheck(X, -PH - 176, "hideDungeonQuests", "Of dungeon quests on outdoor maps",
         "Hides the icons Questie draws at a dungeon entrance for quests that happen inside the dungeon.")
 
