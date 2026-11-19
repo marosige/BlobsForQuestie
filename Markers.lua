@@ -88,7 +88,7 @@ local function unmark(f)
     if f._qqHit then f._qqHit = nil; f:SetHitRectInsets(0, 0, 0, 0) end
     if f._qqGlyph then
         f._qqGlyph = nil
-        if f.texture and f.texture.SetAlpha then f.texture:SetAlpha(1) end
+        if f.texture and f.texture.Show then f.texture:Show() end
     end
 end
 
@@ -120,7 +120,9 @@ local function markIcon(f, plevel)
         m.glyph:SetTexture(pic[1])
         m.glyph:SetDesaturated(grey and true or false)
         m.line:Show(); m.glyph:Show()
-        if f.texture and f.texture.SetAlpha then f.texture:SetAlpha(0) end   -- Questie's own picture under ours
+        -- Questie's own picture under ours: hidden, not faded. A texture's alpha is its colour's alpha, which
+        -- Questie reads to tell a faded icon, and a faded icon shows no tooltip.
+        if f.texture and f.texture.Hide then f.texture:Hide() end
         f._qqGlyph = true
         local ov = f.overlayTexture
         if type(ov) == "table" and ov.IsShown and ov:IsShown() and ov.GetTexture and ov:GetTexture() then
@@ -135,7 +137,7 @@ local function markIcon(f, plevel)
         m.line:Hide(); m.glyph:Hide(); m.over:Hide()
         if f._qqGlyph then
             f._qqGlyph = nil
-            if f.texture and f.texture.SetAlpha then f.texture:SetAlpha(1) end
+            if f.texture and f.texture.Show then f.texture:Show() end
         end
         if f._qqHit then f._qqHit = nil; f:SetHitRectInsets(0, 0, 0, 0) end
     end
