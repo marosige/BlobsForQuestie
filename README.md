@@ -23,7 +23,7 @@ Requires WoW Classic Forever and Questie. Copy the `BlobsForQuestie` folder into
 ## Use
 
 - `/blob` (also `/bq`, `/blobs`) lists the commands. `/blob gui` opens the settings, as does the Blobs for Questie entry in Options > AddOns. The minimap button does the same; right-click turns the addon on or off.
-- **Map buttons:** a checkbox in the settings adds a round button under Questie's own button at the top left of the world map, with a small bar next to it. Hover a button to see what it does. The buttons switch the addon, available quests, quests started by a drop, the blob color and the grouping. The arrow next to the first button folds the rest away.
+- **Map buttons:** a checkbox in the settings adds a round button under Questie's own button at the top left of the world map, with a small bar next to it. Hover a button to see what it does. The buttons switch the addon, available quests, quests started by a drop, the blob color and the grouping. Click the color and grouping buttons for the next mode, right-click for the one before. The arrow next to the first button folds the rest away.
 - **Macros:** the same switches work as commands. Add `on` or `off`, or leave it out to flip the setting.
   - `/blob on`, `/blob off`, `/blob toggle`: the addon itself
   - `/blob buttons [on|off]`: the map buttons

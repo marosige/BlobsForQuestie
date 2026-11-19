@@ -16,6 +16,10 @@ local safeScan = ns.safeScan
 
 local panelChecks = {}
 
+-- the colour and grouping buttons step through their modes: left-click forward, right-click back
+local STEP_HINT = "Click: next, right-click: back"
+local function stepOf(button) return button == "RightButton" and -1 or 1 end
+
 local function buildPanel()
     -- it sits at the top left of the world map, under Questie's own button
     local host = UIParent
@@ -87,7 +91,7 @@ local function buildPanel()
         bar:SetBackdropColor(0.05, 0.07, 0.10, 0.8)
         bar:SetBackdropBorderColor(0.6, 0.6, 0.6, 0.9)
     end
-    -- icon switches: coloured = on, grey = off
+        -- icon switches: coloured = on, grey = off
     local function questieIcon(kind)
         local icType = Questie and kindIcon(kind)
         return icType and Questie.usedIcons and Questie.usedIcons[icType]
@@ -155,10 +159,11 @@ local function buildPanel()
         line:SetSize(21, 14)
         line:SetPoint("LEFT", -1, 0)
         line:SetVertexColor(1, 0.95, 0.8, 0.9)
-        b:SetScript("OnClick", function()
-            local nxt = 1
-            for n, m in ipairs(MODES) do if m == ns.DB.colorMode then nxt = n % #MODES + 1 end end
-            ns.DB.colorMode = MODES[nxt]
+        b:RegisterForClicks("LeftButtonUp", "RightButtonUp")
+        b:SetScript("OnClick", function(_, button)
+            local cur = 1
+            for n, m in ipairs(MODES) do if m == ns.DB.colorMode then cur = n end end
+            ns.DB.colorMode = MODES[(cur - 1 + stepOf(button)) % #MODES + 1]
             if ns.heat then ns.heat._dsig = nil end
             safeScan()
             QQ:RefreshGUI()
@@ -167,6 +172,7 @@ local function buildPanel()
         b:SetScript("OnEnter", function(self)
             GameTooltip:SetOwner(self, "ANCHOR_TOP")
             GameTooltip:AddLine("Blob color: " .. (NAMES[ns.DB.colorMode] or ""), 1, 1, 1)
+            GameTooltip:AddLine(STEP_HINT, 0.7, 0.7, 0.7)
             GameTooltip:Show()
         end)
         b:SetScript("OnLeave", function() GameTooltip:Hide() end)
@@ -197,9 +203,11 @@ local function buildPanel()
             two[k]:SetPoint("CENTER", (k == 1 and -6 or 6), 0)
         end
         local NEXT = { quest = "all", all = "color", color = "quest" }
+        local PREV = { quest = "color", all = "quest", color = "all" }
         local NAMES = { quest = "one blob per quest", all = "unified blobs", color = "unified blobs by color" }
-        b:SetScript("OnClick", function()
-            ns.DB.groupMode = NEXT[ns.DB.groupMode] or "all"
+        b:RegisterForClicks("LeftButtonUp", "RightButtonUp")
+        b:SetScript("OnClick", function(_, button)
+            ns.DB.groupMode = (stepOf(button) < 0 and PREV or NEXT)[ns.DB.groupMode] or "all"
             if ns.heat then ns.heat._dsig = nil end
             safeScan()
             QQ:RefreshGUI()
@@ -208,6 +216,7 @@ local function buildPanel()
         b:SetScript("OnEnter", function(self)
             GameTooltip:SetOwner(self, "ANCHOR_TOP")
             GameTooltip:AddLine("Grouping: " .. (NAMES[ns.DB.groupMode] or ""), 1, 1, 1)
+            GameTooltip:AddLine(STEP_HINT, 0.7, 0.7, 0.7)
             GameTooltip:Show()
         end)
         b:SetScript("OnLeave", function() GameTooltip:Hide() end)
