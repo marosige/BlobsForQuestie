@@ -541,7 +541,8 @@ local function buildGUI()
             r = questieIcon(Questie and Questie.ICON_TYPE_REPEATABLE) or avail,
         }
         local loot = questieIcon(Questie and Questie.ICON_TYPE_LOOT)
-        local NEW = { [3] = true, [8] = true, [13] = true, [19] = true }   -- a few quests new in Forever
+        -- a few quests new in Forever; [17] sits by the mouse, so the badge shows at the default 10% radius too
+        local NEW = { [3] = true, [8] = true, [13] = true, [17] = true, [19] = true }
         local shown = {}
         for n, q in ipairs(ICONS3) do
             local mk = marker(box3, 16, q[1], -(CY + q[2]))
