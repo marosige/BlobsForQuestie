@@ -126,7 +126,6 @@ local function initDB()
     ns.DB.playerOpacity = min(max(ns.DB.playerOpacity, 0), 100)
     ns.DB.allOpacity = min(max(ns.DB.allOpacity, 0), 100)
     ns.DB.mouseOpacity = min(max(ns.DB.mouseOpacity, 0), 100)
-    ns.DB.objMouse = ns.DB.objPlayer                                           -- one radius for the character and the mouse
     ns.DB.playerOpacity, ns.DB.mouseOpacity, ns.DB.allOpacity = 100, 100, 100   -- the blob always stays under the icons
     ns.DB.blobAlpha = min(max(ns.DB.blobAlpha, 0.1), 0.8)
     if type(ns.DB.minimap) ~= "table" then ns.DB.minimap = { hide = false, minimapPos = 215 } end

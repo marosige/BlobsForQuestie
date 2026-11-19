@@ -90,11 +90,11 @@ end
 
 -- label on the left above the bar, value on the right; show(v) formats the value
 local sliderCount = 0
-local function makeSlider(parent, x, y, w, label, tip, minV, maxV, step, show, get, set)
+local function makeSlider(parent, x, y, w, label, tip, minV, maxV, step, show, get, set, inline)
     sliderCount = sliderCount + 1
     local name = "BlobsForQuestieSlider" .. sliderCount
     local sl = CreateFrame("Slider", name, parent, "OptionsSliderTemplate")
-    sl:SetPoint("TOPLEFT", x, y - 18)
+    sl:SetPoint("TOPLEFT", x, inline and y or y - 18)   -- inline: on the row of a checkbox, value at the end
     sl:SetWidth(w)
     sl:SetMinMaxValues(minV, maxV)
     sl:SetValueStep(step)
@@ -110,10 +110,10 @@ local function makeSlider(parent, x, y, w, label, tip, minV, maxV, step, show, g
     if text then
         text:ClearAllPoints()
         text:SetPoint("BOTTOMLEFT", sl, "TOPLEFT", 2, 2)
-        text:SetText(label)
+        text:SetText(inline and "" or label)
     end
     local val = sl:CreateFontString(nil, "OVERLAY", "GameFontNormal")
-    val:SetPoint("BOTTOMRIGHT", sl, "TOPRIGHT", -2, 2)
+    if inline then val:SetPoint("LEFT", sl, "RIGHT", 8, 0) else val:SetPoint("BOTTOMRIGHT", sl, "TOPRIGHT", -2, 2) end
     sl._refreshing = false
     sl:SetScript("OnValueChanged", function(self, v)
         v = floor(v / step + 0.5) * step
