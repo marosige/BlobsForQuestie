@@ -1,11 +1,13 @@
 -- Blobs for Questie: Markers
--- Quest markers on the world map. The available ! and the turn-in ? get the addon's own picture with an outline
+-- Quest markers on the world map (and on the minimap, if wanted). The available ! and the turn-in ? get the
+-- addon's own picture with an outline
 -- in the quest-title colour of their difficulty (a green ? : turn it in before it goes grey), and quests that are
 -- new in WoW Classic Forever get a small infinity badge. Everything sits in a frame of its own above Questie's
 -- icon, so a tint another addon lays over Questie's picture does not cover it.
 local ADDON_NAME, ns = ...
 local QQ = ns.QQ
-local ipairs, type = ipairs, type
+local ipairs, pairs, type, tostring = ipairs, pairs, type, tostring
+local format = string.format
 
 local ICONS = "Interface\\AddOns\\BlobsForQuestie\\Icons\\"
 local MARK_SCALE = 1.3            -- the pictures are 1.3x the icon: room for the outline around it
@@ -61,6 +63,13 @@ local function ensureMark(f)
     f._qqMark = m
     -- Questie sizes its icons with the map's zoom and its own settings: the pictures follow
     if f.HookScript then f:HookScript("OnSizeChanged", function(self) if self._qqMark and self._qqMark:IsShown() then layout(self) end end) end
+    -- Questie fades its icons through the picture's colour (the minimap's edge, quests it fades): ours fade with it
+    local tex = f.texture
+    if type(tex) == "table" and type(tex.SetVertexColor) == "function" then
+        hooksecurefunc(tex, "SetVertexColor", function(_, _, _, _, a) m:SetAlpha(type(a) == "number" and a or 1) end)
+        local _, _, _, a = tex:GetVertexColor()
+        m:SetAlpha(type(a) == "number" and a or 1)
+    end
     return m
 end
 
@@ -74,10 +83,11 @@ local function unmark(f)
     end
 end
 
--- f: a Questie icon; plevel: the player's level. World map only: the minimap stays as Questie draws it.
+-- f: a Questie icon; plevel: the player's level. Minimap icons only with "On the minimap too".
 local function markIcon(f, plevel)
     local d = f.data
-    if not (ns.DB and ns.DB.enabled and type(d) == "table" and not f.miniMapIcon and (d.Type == "available" or d.Type == "complete")) then
+    if not (ns.DB and ns.DB.enabled and type(d) == "table" and (not f.miniMapIcon or ns.DB.markMinimap)
+        and (d.Type == "available" or d.Type == "complete")) then
         unmark(f)
         return
     end
@@ -126,6 +136,43 @@ end
 
 -- Questie hands the frame to another icon: nothing of ours stays on it
 ns.forgetHooks[#ns.forgetHooks + 1] = unmark
+
+-- The minimap's icons, whether the world map is open or not: checked every second, worked through only when
+-- Questie's icons, the player's level or the settings changed.
+local miniSig
+local function markMinimapIcons()
+    local qm = ns.QuestieMap
+    if not (ns.DB and qm and type(qm.questIdFrames) == "table") then return end
+    local plevel = UnitLevel("player") or 1
+    local n = 0
+    for _, names in pairs(qm.questIdFrames) do
+        for _ in pairs(names) do n = n + 1 end
+    end
+    local want = ns.DB.enabled and ns.DB.markMinimap and (ns.DB.colorAvail or ns.DB.markForever) and true or false
+    local sig = format("%s|%s|%s|%d|%d|%d", tostring(want), tostring(ns.DB.colorAvail), tostring(ns.DB.markForever), plevel, n, QQ.unloads or 0)
+    if sig == miniSig then return end
+    miniSig = sig
+    for _, names in pairs(qm.questIdFrames) do
+        for _, name in pairs(names) do
+            local f = _G[name]
+            if f and f.miniMapIcon and f.data then
+                if want then
+                    ns.hookUnload(f)
+                    markIcon(f, plevel)
+                elseif f._qqMark then
+                    unmark(f)
+                end
+            end
+        end
+    end
+end
+if C_Timer and C_Timer.NewTicker then
+    C_Timer.NewTicker(1, function()
+        local ok, err = pcall(markMinimapIcons)
+        if not ok and ns.reportError then ns.reportError("minimap markers: " .. tostring(err)) end
+    end)
+end
+ns.markMinimapIcons = markMinimapIcons
 
 ns.isForeverQuest = isForeverQuest
 ns.markIcon = markIcon

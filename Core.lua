@@ -39,6 +39,7 @@ local DEFAULTS = {
     hideDungeonAvail = false, -- hide the available dungeon and raid quests
     colorAvail = false,    -- the ! and ? get an outline in the quest-title colour of their difficulty (see Markers)
     markForever = true,    -- a small infinity badge on the ! and ? of quests that are new in WoW Classic Forever
+    markMinimap = true,    -- the outline and the badge on the minimap's ! and ? too
     blobsWorld = true,     -- blobs on the continent / world maps
     minimapBlobs = false,  -- the same rules (and blobs) on the minimap
     groupMode = "all",     -- "quest" (one blob per quest objective), "all" (one unified blob) or "color" (one unified blob per color)

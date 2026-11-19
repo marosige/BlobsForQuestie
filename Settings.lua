@@ -454,11 +454,11 @@ local function buildGUI()
     radius(-PH - 86, "objMouse", "In percent of the map width.", "showNearMouse")
 
     -- what to hide, then what happens when you point at something
-    makeHeader(p, X, -PH - 118, "Zone maps also show")
-    check(p, -PH - 140, "hideOtherZones", "Neighbouring zones",
+    makeHeader(p, X, -PH - 118, "On zone maps, also show")
+    check(p, -PH - 140, "hideOtherZones", "Questie icons of neighbouring zones",
         "Their quests (blobs and icons, as in your own zone) and Questie's town icons. Off: they stay empty. A city always shows in its own zone. Blizzard's own map icons are not touched.",
         nil, nil, true)
-    check(p, -PH - 166, "hideDungeonQuests", "Dungeon quests at the entrance",
+    check(p, -PH - 166, "hideDungeonQuests", "Questie icons of dungeon quests at the entrance",
         "The icons Questie puts at a dungeon entrance for quests inside it.", nil, nil, true)
 
     makeHeader(p, X, -PH - 198, "Mouse over")
@@ -595,6 +595,8 @@ local function buildGUI()
         "A colored outline like quest titles: grey (easy) to red (hard). A green ? : turn the quest in before it goes grey.")
     check(p, -PH - 264, "markForever", "Mark quests new in Forever",
         "A small badge on the ! and ? of quests that are not in the original Classic.", nil, ICONS .. "forever.png")
+    check(p, -PH - 290, "markMinimap", "On the minimap too",
+        "The outline and the badge on the minimap's ! and ? as well.")
     -- samples: the ! in the five difficulty colors, then a turn-in ?
     local BAND_STEPS = { -99, -3, 0, 3, 5 }   -- grey, green, yellow, orange, red
     local complete = questieIcon(Questie and Questie.ICON_TYPE_COMPLETE)

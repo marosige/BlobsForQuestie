@@ -357,6 +357,7 @@ end
 
 function QQ:Scan()
     if QQ.SyncMini then QQ:SyncMini() end
+    if ns.markMinimapIcons then ns.markMinimapIcons() end   -- settings changes reach the minimap's markers at once
     if not (ns.HBD and ns.QuestieMap and ns.QuestieMap.questIdFrames and Questie and Questie.db) then return end
     checkStyle()
     if not ns.DB.enabled then
