@@ -463,11 +463,11 @@ local function buildGUI()
     radius(-PH - 94, "objMouse", "How far from the mouse pointer, in percent of the map's width.", "showNearMouse")
 
     -- what to hide, then what happens when you point at something
-    makeHeader(p, X, -PH - 142, "Hide on zone maps")
-    check(p, -PH - 164, "hideOtherZones", "Questie icons of neighbouring zones",
-        "Hides the quests of the zones around the zone you are looking at, blobs and icons alike, and Questie's town icons there. Your own zone is not affected, and a city always shows in the zone it lies in. Blizzard's own map icons stay.")
-    check(p, -PH - 190, "hideDungeonQuests", "Questie icons of dungeon quests at the entrance",
-        "Questie draws the objectives of dungeon quests at the dungeon's entrance on the outdoor map. Turn this on to hide those icons.")
+    makeHeader(p, X, -PH - 142, "Hide Questie icons")
+    check(p, -PH - 164, "hideOtherZones", "Of neighbouring zones, on a zone map",
+        "On a zone map, hides the quests of the zones around it, blobs and icons alike, and Questie's town icons there. The zone you look at is not affected, and a city always shows in the zone it lies in. Continent and world maps and Blizzard's own map icons stay as they are.")
+    check(p, -PH - 190, "hideDungeonQuests", "Of dungeon quests at the entrance, on every map",
+        "Questie draws the objectives of dungeon quests at the dungeon's entrance. Turn this on to hide those icons on zone, continent and world maps, and on the minimap when it shows blobs.")
 
     makeHeader(p, X, -PH - 238, "Focus on a quest")
     check(p, -PH - 260, "hoverShow", "Pointing at an icon shows all spots of that objective",
