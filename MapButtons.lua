@@ -243,15 +243,17 @@ local function buildPanel()
         b:SetScript("OnLeave", function() GameTooltip:Hide() end)
         panelChecks[#panelChecks + 1] = function()
             local mode = ns.DB.groupMode
-            local c = ns.DB.colorMode == "level" and questColor(0) or (ns.DB.colorMode == "kind" and ns.DB.colors.loot) or ns.DB.colorAll
-            local c2 = ns.DB.colorMode == "level" and questColor(3) or (ns.DB.colorMode == "kind" and ns.DB.colors.kill) or ns.DB.colorAll
+            -- the same two neighbouring colours in every picture: unified flows from one to the other, by color
+            -- splits them into two blobs
+            local c, c2
+            if ns.DB.colorMode == "level" then c, c2 = questColor(0), questColor(3)
+            elseif ns.DB.colorMode == "kind" then c, c2 = ns.DB.colors.loot, ns.DB.colors.lootMid or ns.DB.colors.loot
+            else c, c2 = ns.DB.colorAll, ns.DB.colorAll end
             local byColor = mode == "color" and ns.DB.colorMode ~= "single"
             one:SetShown(mode == "all" or (mode == "color" and not byColor))
             for _, t in ipairs(two) do t:SetShown(mode == "quest" or byColor) end   -- by color: two separate blobs, two colors
-            -- unified: one blob, its colour flows gently from one part to the next (two neighbouring colours)
             local flow = mode == "all" and ns.DB.colorMode ~= "single"
-            local f2 = ns.DB.colorMode == "kind" and (ns.DB.colors.lootMid or c) or c2
-            if not (flow and hGradient(one, c, f2, 0.95)) then one:SetVertexColor(c[1], c[2], c[3], 0.95) end
+            if not (flow and hGradient(one, c, c2, 0.95)) then one:SetVertexColor(c[1], c[2], c[3], 0.95) end
             two[1]:SetVertexColor(c[1], c[2], c[3], 0.95)
             local d = byColor and c2 or c
             two[2]:SetVertexColor(d[1], d[2], d[3], 0.95)

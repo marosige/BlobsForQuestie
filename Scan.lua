@@ -73,11 +73,21 @@ local patrolCache = setmetatable({}, { __mode = "k" })
 local miniPatrolCache = setmetatable({}, { __mode = "k" })
 
 -- points along the routes of an icon's NPC, about every `stepPx` pixels of a W x H map: { x%, y%, px, py }
-local function patrolPoints(f, W, H, stepPx)
+-- view: the map they are drawn on, when it is not the icon's own map (a city or a neighbouring zone)
+local function patrolPoints(f, W, H, stepPx, view)
     local paths = f.data and f.data.waypointPaths
     if type(paths) ~= "table" or #paths == 0 or not f.UiMapID then return nil end
     local out
-    local key = floor(stepPx * 10) .. "|" .. floor(W) .. "|" .. floor(H)
+    local tr = view and view ~= f.UiMapID and ns.HBD.TranslateZoneCoordinates and view or nil
+    local key = floor(stepPx * 10) .. "|" .. floor(W) .. "|" .. floor(H) .. "|" .. tostring(tr)
+    local function put(list, x, y)
+        if tr then
+            local a, b = ns.HBD:TranslateZoneCoordinates(x / 100, y / 100, f.UiMapID, tr, true)
+            if type(a) ~= "number" or type(b) ~= "number" then return end
+            x, y = a * 100, b * 100
+        end
+        list[#list + 1] = { x, y, x * W / 100, y * H / 100 }
+    end
     for _, path in ipairs(paths) do
         local pts = type(path) == "table" and path.points
         if type(pts) == "table" and #pts >= 2 and path.uiMapId == f.UiMapID then
@@ -90,12 +100,11 @@ local function patrolPoints(f, W, H, stepPx)
                     local n = max(1, ceil(len / stepPx))
                     for k = 0, n - 1 do
                         local t = k / n
-                        local x, y = a.x + (b.x - a.x) * t, a.y + (b.y - a.y) * t
-                        list[#list + 1] = { x, y, x * W / 100, y * H / 100 }
+                        put(list, a.x + (b.x - a.x) * t, a.y + (b.y - a.y) * t)
                     end
                 end
                 local last = pts[#pts]
-                list[#list + 1] = { last.x, last.y, last.x * W / 100, last.y * H / 100 }
+                put(list, last.x, last.y)
                 c = { key = key, list = list }
                 patrolCache[path] = c
             end
@@ -104,6 +113,23 @@ local function patrolPoints(f, W, H, stepPx)
         end
     end
     return out
+end
+
+-- Where an icon of another map (a city inside the zone, a neighbouring zone) sits on the viewed map, in map
+-- percent; nil when it is not on this map. Icons do not move, so it is worked out once per map.
+local function viewPos(f)
+    local v = S.viewMap
+    if f._qqtv ~= v or f._qqtpx ~= f.x or f._qqtpy ~= f.y or f._qqtm ~= f.UiMapID then
+        f._qqtv, f._qqtpx, f._qqtpy, f._qqtm = v, f.x, f.y, f.UiMapID
+        f._qqtx, f._qqty = nil, nil
+        if ns.HBD.TranslateZoneCoordinates then
+            local a, b = ns.HBD:TranslateZoneCoordinates(f.x / 100, f.y / 100, f.UiMapID, v, true)
+            if type(a) == "number" and type(b) == "number" and a > -0.02 and a < 1.02 and b > -0.02 and b < 1.02 then
+                f._qqtx, f._qqty = a * 100, b * 100
+            end
+        end
+    end
+    return f._qqtx, f._qqty
 end
 
 local function scanZone()
@@ -138,17 +164,21 @@ local function scanZone()
             if f._qqHid then f._qqHide = nil; applyHide(f, false) end
         elseif t == "available" or OBJECTIVE_TYPES[t] then
             if questieHides(f, true) then return end
+            -- an icon of another map (a city inside this zone, a neighbouring zone that is not hidden) joins the
+            -- blobs where it sits on this map, and follows the same near / mouse rules
+            local mx, my = f.x, f.y
             if other then
-                -- belongs to another map (a city inside this zone, or a neighbouring zone that is not hidden): not part
-                -- of the blobs here, it shows as a plain icon. _qqHide = false so the hooks agree until the next scan.
-                f._qqHide = false
-                if f._qqHid then applyHide(f, false) end
-                return
+                mx, my = viewPos(f)
+                if not mx then   -- not on this map at all: left as Questie draws it (the hooks agree until the next scan)
+                    f._qqHide = false
+                    if f._qqHid then applyHide(f, false) end
+                    return
+                end
             end
-            local px, py = f.x * W / 100, f.y * H / 100
             local isAvail = t == "available"
-            all[#all + 1] = { f = f, x = px, y = py, kind = isAvail and 4 or classOf(d.Icon), obj = isAvail and "AVAIL" or objKey(d), step = heatStep(d, plevel),
-                extra = (not isAvail) and patrolPoints(f, W, H, max(W * 0.026, 14) * 0.7 * 0.8) or nil }
+            all[#all + 1] = { f = f, x = mx * W / 100, y = my * H / 100, mx = mx, my = my, kind = isAvail and 4 or classOf(d.Icon),
+                obj = isAvail and "AVAIL" or objKey(d), step = heatStep(d, plevel),
+                extra = (not isAvail) and patrolPoints(f, W, H, max(W * 0.026, 14) * 0.7 * 0.8, other and S.viewMap) or nil }
         elseif f._qqHid then
             f._qqHide = nil
             applyHide(f, false)
@@ -175,7 +205,7 @@ local function scanZone()
         local g = groups[gk]
         if not g then g = { key = gk, near = near and not merged, noDraw = it.kind == 4, items = {}, pts = {}, seen = {} }; groups[gk] = g end
         g.items[#g.items + 1] = it
-        addPoint(g, floor(it.f.x * 1.25) * 1000 + floor(it.f.y * 1.25), it.x, it.y, it.kind, it.step)   -- ~0.8% cells
+        addPoint(g, floor(it.mx * 1.25) * 1000 + floor(it.my * 1.25), it.x, it.y, it.kind, it.step)   -- ~0.8% cells
         if it.extra then   -- the whole patrol route is part of the blob
             for _, e in ipairs(it.extra) do
                 addPoint(g, floor(e[1] * 1.25) * 1000 + floor(e[2] * 1.25), e[3], e[4], it.kind, it.step)

@@ -536,13 +536,12 @@ function QQ:HoverTick(f, elapsed)
         f._cx, f._cy, f._cr, f._hovKey, f._shift = px, py, rad, hovKey, shift
         if keyChanged then applyFocus(hovKey, shift and hovKey ~= nil) end
         local r2 = rad * rad
-        local W, H = f._W, f._H
         for _, b in ipairs(blobs) do
             if not b.near then
                 local changed = false
                 for _, it in ipairs(b.items) do
                     local fr = it.f
-                    local dx, dy = (fr.x or 0) / 100 * W - px, (fr.y or 0) / 100 * H - py
+                    local dx, dy = it.x - px, it.y - py   -- where the scan put it on this map (icons of other maps too)
                     local on = rad > 0 and (dx * dx + dy * dy) <= r2
                     if not on and hovKey then   -- the same objective as the hovered icon
                         local d = fr.data

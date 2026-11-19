@@ -501,7 +501,7 @@ local function forgetFrame(f)
     if f._qqAlpha ~= nil then f:SetAlpha(f._qqAlpha); f:EnableMouse(true) end
     local tex = f.texture
     if f._qqTint and type(tex) == "table" and tex.SetDesaturated then tex:SetDesaturated(false) end
-    f._qqAlpha, f._qqHid, f._qqHide, f._qqQH, f._qqCur, f._qqwx = nil, nil, nil, nil, nil, nil
+    f._qqAlpha, f._qqHid, f._qqHide, f._qqQH, f._qqCur, f._qqwx, f._qqtv = nil, nil, nil, nil, nil, nil, nil
     f._qqTint, f._qqTex, f._qqSetTex, f._qqRGB = nil, nil, nil, nil
     f._qqShowHook = nil   -- Unload cleared the OnShow script, and our hook with it
     for _, fn in ipairs(forgetHooks) do fn(f) end
