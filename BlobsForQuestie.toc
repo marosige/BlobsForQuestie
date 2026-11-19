@@ -1,6 +1,6 @@
 ## Interface: 16001
 ## Title: Blobs for Questie
-## Notes: Declutters the Questie map: far quest objectives become soft blobs, Questie's own icons show near you and the mouse.
+## Notes: Unofficial addon for Questie. Declutters the Questie map: far quest objectives become soft blobs, while Questie's own icons show near your character and the mouse. Colors by level, objective type or drop rate.
 ## Author: marosige
 ## Version: 1.0
 ## Category: Quests

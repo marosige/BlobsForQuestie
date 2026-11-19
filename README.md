@@ -1,6 +1,6 @@
 # Blobs for Questie
 
-A companion addon for **Questie** that declutters the map. It never changes Questie's files; it only decides which of Questie's own icons are shown.
+An unofficial addon for **Questie** that declutters the map: far quest objectives become soft blobs, while Questie's own icons show near your character and the mouse. Colors by level, objective type or drop rate. It never changes Questie's files; it only decides which of Questie's own icons are shown.
 
 ## Features
 
