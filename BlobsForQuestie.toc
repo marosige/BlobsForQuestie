@@ -2,7 +2,7 @@
 ## Title: Blobs for Questie
 ## Notes: Unofficial addon for Questie that declutters the map: far quest objectives become soft blobs, while Questie's own icons show near your character and the mouse. Colors by level, objective type or drop rate.
 ## Author: marosige
-## Version: 1.0
+## Version: 1.0.1
 ## Category: Quests
 ## X-Category: Quests
 ## IconTexture: Interface\AddOns\BlobsForQuestie\Icons\icon.png

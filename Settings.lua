@@ -373,15 +373,13 @@ local function buildGUI()
 
     -- 2: Questie icons -----------------------------------------------------------------------
     p = pages[2]
-    -- preview: the same blob twice, opened up around the character (left) and around the mouse (right)
+    -- preview: the same blob twice, Questie's icons shown around the character (left) and around the mouse (right)
     do
         local box2 = mapStrip(p, 0.5)
         local killIcon = questieIcon(kindIcon(1))
         local ICON_POS = { { -86, -4 }, { -68, 16 }, { -50, -16 }, { -30, 6 }, { -12, -18 }, { 6, 16 }, { 22, -4 }, { 40, -20 }, { 56, 12 }, { 74, -8 }, { 90, 8 } }
-        local function scene(cx, marker, key, distKey, opKey, caption)
+        local function scene(cx, marker, key, distKey, caption)
             local sc = {}
-            sc.mask = box2.CreateMaskTexture and box2:CreateMaskTexture() or nil
-            if sc.mask then sc.mask:SetTexture(ICONS .. "mask.png", "CLAMP", "CLAMP") end
             local function blobTex(layer, file)
                 local t = box2:CreateTexture(nil, "ARTWORK", nil, layer)
                 t:SetTexture(ICONS .. file)
@@ -389,13 +387,8 @@ local function buildGUI()
                 t:SetPoint("CENTER", box2, "LEFT", cx, 3)
                 return t
             end
-            sc.faint = blobTex(0, "blob.png")            -- what is left of the blob under the icons
             sc.fill = blobTex(1, "blob.png")
             sc.line = blobTex(2, "blobline.png")
-            if sc.mask then
-                if sc.fill.AddMaskTexture then sc.fill:AddMaskTexture(sc.mask) end
-                if sc.line.AddMaskTexture then sc.line:AddMaskTexture(sc.mask) end
-            end
             sc.icons = {}
             for i, pos in ipairs(ICON_POS) do
                 local t = box2:CreateTexture(nil, "OVERLAY")
@@ -417,29 +410,16 @@ local function buildGUI()
                 local all = ns.DB.revealAll and true or false
                 local on = not all and ns.DB[key] and true or false
                 local rad = min(max((ns.DB[distKey] or 0) * DEMO_SCALE, 4), 110)   -- the strip shows about half of a map
-                local k = on and (ns.DB[opKey] or 0) / 100 or 0
-                if all then a, la = a * (ns.DB.allOpacity or 0) / 100, la * (ns.DB.allOpacity or 0) / 100 end
-                for _, t in ipairs({ sc.faint, sc.fill }) do t:SetVertexColor(c[1], c[2], c[3]) end
+                sc.fill:SetVertexColor(c[1], c[2], c[3])
                 sc.line:SetVertexColor((c[1] + 1) / 2, (c[2] + 1) / 2, (c[3] + 1) / 2)
-                sc.fill:SetAlpha(a); sc.line:SetAlpha(la)
-                sc.faint:SetShown(k > 0); sc.faint:SetAlpha(a * k)
-                if sc.mask then
-                    sc.mask:ClearAllPoints()
-                    if on then
-                        sc.mask:SetSize(rad * 5, rad * 5)
-                        sc.mask:SetPoint("CENTER", box2, "LEFT", cx, 3)
-                    else
-                        sc.mask:SetSize(1, 1)
-                        sc.mask:SetPoint("TOPLEFT", box2, "TOPLEFT", -50, 50)
-                    end
-                end
+                sc.fill:SetAlpha(a); sc.line:SetAlpha(la)   -- the blob stays under the icons, as on the map
                 for i, pos in ipairs(ICON_POS) do
                     sc.icons[i]:SetShown(all or (on and (pos[1] * pos[1] + pos[2] * pos[2]) <= rad * rad))
                 end
             end
         end
-        scene(CW * 0.25, "player.png", "showNearPlayer", "objPlayer", "playerOpacity", "around your character")
-        scene(CW * 0.75, "cursor.png", "showNearMouse", "objMouse", "mouseOpacity", "around the mouse")
+        scene(CW * 0.25, "player.png", "showNearPlayer", "objPlayer", "around your character")
+        scene(CW * 0.75, "cursor.png", "showNearMouse", "objMouse", "around the mouse")
     end
     makeHeader(p, X, -PH - 12, "Show Questie's own icons")
     local HALF = floor((CW - 28 - 24) / 2)

@@ -5,8 +5,6 @@ local floor, ceil, max, min, sqrt = math.floor, math.ceil, math.max, math.min, m
 local format = string.format
 local pairs, ipairs, type, tostring, tonumber = pairs, ipairs, type, tostring, tonumber
 local say = ns.say
-local NEAR_ADD = ns.NEAR_ADD
-local NEAR_ONLY = ns.NEAR_ONLY
 local OBJECTIVE_TYPES = ns.OBJECTIVE_TYPES
 local S = ns.S
 local applyHide = ns.applyHide
@@ -24,7 +22,6 @@ local heatStep = ns.heatStep
 local hideLayer = ns.hideLayer
 local hookFrame = ns.hookFrame
 local lookBlob = ns.lookBlob
-local nearOpacity = ns.nearOpacity
 local objKey = ns.objKey
 local playerYards = ns.playerYards
 local questKey = ns.questKey
@@ -141,8 +138,8 @@ local function scanZone()
         end
     end)
 
-    -- Everything of one colour is ONE set of blobs (no overlapping, darker patches). Icons near the player are
-    -- not part of the far blobs: they show as plain icons (optionally over a paler blob of their own).
+    -- Everything of one colour is ONE set of blobs (no overlapping, darker patches). Icons near the player show
+    -- as plain icons; the blob stays under them.
     local R = max(W * 0.026, 14) * 0.7
     local py = playerYards()
     local groups = {}
@@ -156,26 +153,22 @@ local function scanZone()
         elseif ns.DB.groupMode == "quest" then gk = it.obj
         elseif ns.DB.groupMode == "color" then gk = colorGroupKey(it.step)
         else gk = "ALL" end
-        -- merged blobs stay ONE blob: spots near the player just fade inside it (the icons show on top)
+        -- merged blobs stay ONE blob, the icons near the player show on top of it
         if not merged then gk = gk .. (near and "N" or "F") end
         local g = groups[gk]
         if not g then g = { key = gk, near = near and not merged, noDraw = it.kind == 4, items = {}, pts = {}, seen = {} }; groups[gk] = g end
         g.items[#g.items + 1] = it
-        local cell = floor(it.f.x * 1.25) * 1000 + floor(it.f.y * 1.25) + (merged and near and 5000000 or 0)   -- one point per ~0.8% cell is plenty
+        local cell = floor(it.f.x * 1.25) * 1000 + floor(it.f.y * 1.25)   -- one point per ~0.8% cell is plenty
         if not g.seen[cell] then
             g.seen[cell] = true
-            local step = it.step
-            if merged and near then step = step and (step + NEAR_ADD) or NEAR_ONLY end
-            g.pts[#g.pts + 1] = { it.x, it.y, it.kind, step }
+            g.pts[#g.pts + 1] = { it.x, it.y, it.kind, it.step }
         end
         if it.extra then   -- the whole patrol route is part of the blob
             for _, e in ipairs(it.extra) do
-                local ec = floor(e[1] * 1.25) * 1000 + floor(e[2] * 1.25) + (merged and near and 5000000 or 0)
+                local ec = floor(e[1] * 1.25) * 1000 + floor(e[2] * 1.25)
                 if not g.seen[ec] then
                     g.seen[ec] = true
-                    local step = it.step
-                    if merged and near then step = step and (step + NEAR_ADD) or NEAR_ONLY end
-                    g.pts[#g.pts + 1] = { e[3], e[4], it.kind, step }
+                    g.pts[#g.pts + 1] = { e[3], e[4], it.kind, it.step }
                 end
             end
         end
@@ -183,8 +176,8 @@ local function scanZone()
 
     local list = {}
     for key, g in pairs(groups) do
-        if g.near and (g.noDraw or nearOpacity() <= 0) then
-            setBlobShown({ items = g.items }, true)   -- no blob under them: just the icons
+        if g.near and g.noDraw then
+            setBlobShown({ items = g.items }, true)   -- available quests near you: just the icons
         else
             local G = cachedGeometry("Z|" .. key, g.pts, R, W, H)
             local blobs = {}
@@ -203,14 +196,7 @@ local function scanZone()
     table.sort(list, function(a, b) return a.key < b.key end)
 
     QQ.blobs = list
-    local live = {}
-    for _, b in ipairs(list) do
-        live[b.key] = true
-        setBlobShown(b, b.near)
-    end
-    for k in pairs(QQ.hover) do
-        if not live[k] then QQ.hover[k] = nil end
-    end
+    for _, b in ipairs(list) do setBlobShown(b, b.near) end
     if #list == 0 then hideLayer() return end
     updateLayer(list, W, H)
 end
@@ -281,7 +267,6 @@ local function scanContinent()
 
     if not ns.DB.blobsWorld then
         QQ.blobs = nil
-        QQ.hover = {}
         hideLayer()
         return
     end
@@ -297,7 +282,6 @@ local function scanContinent()
     end
     table.sort(list, function(a, b) return a.key < b.key end)
     QQ.blobs = nil
-    QQ.hover = {}
     if #list == 0 then hideLayer() return end
     updateLayer(list, W, H)
 end
@@ -539,8 +523,8 @@ function QQ:MinimapTick()
                 else
                     near = dist ~= nil and dist <= nearY
                     hide = not near
-                    if onMap and (ns.DB.groupMode ~= "quest" or not near or nearOpacity() > 0) then
-                        -- merged: one blob, the spots near the player fade inside it
+                    if onMap then
+                        -- merged: one blob, the icons near the player show on top of it
                         local step = heatStep(d, plevel)
                         local gk
                         if ns.DB.groupMode == "quest" then gk = objKey(d) .. (near and "N" or "F")
@@ -548,7 +532,6 @@ function QQ:MinimapTick()
                         else gk = "ALL" end
                         local g = groups[gk]
                         if not g then g = { key = gk, near = near and ns.DB.groupMode == "quest", pts = {}, items = {} }; groups[gk] = g end
-                        if ns.DB.groupMode ~= "quest" and near then step = step and (step + NEAR_ADD) or NEAR_ONLY end
                         g.pts[#g.pts + 1] = { mx, my, classOf(d.Icon), step }
                         sig[#sig + 1] = floor(mx) .. "," .. floor(my) .. gk .. (near and "n" or "")
                         -- the whole patrol route belongs to the blob
@@ -593,7 +576,7 @@ function QQ:MinimapTick()
     local m = ensureMini()
     table.sort(sig)
     local cl = ns.DB.colorAll
-    local key = table.concat(sig, ";") .. "|" .. ns.DB.colorMode .. "|" .. ns.DB.groupMode .. "|" .. nearOpacity() .. "|" .. ns.DB.blobAlpha .. "|" .. floor(radius)
+    local key = table.concat(sig, ";") .. "|" .. ns.DB.colorMode .. "|" .. ns.DB.groupMode .. "|" .. ns.DB.blobAlpha .. "|" .. floor(radius)
         .. "|" .. format("%.3f%.3f%.3f", cl[1], cl[2], cl[3])
     for _, k in ipairs({ "kill", "loot", "other" }) do local c = ns.DB.colors[k]; key = key .. format("%.3f%.3f%.3f", c[1], c[2], c[3]) end
     if key ~= m._sig then

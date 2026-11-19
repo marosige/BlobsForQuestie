@@ -11,8 +11,8 @@ local ADDON_NAME, ns = ...
 local QQ = {}
 ns.QQ = QQ
 _G.BlobsForQuestie = QQ
-QQ.version = "1.0"
-QQ.hover = {}
+local getMeta = (C_AddOns and C_AddOns.GetAddOnMetadata) or GetAddOnMetadata
+QQ.version = (getMeta and getMeta(ADDON_NAME, "Version")) or "?"   -- from the .toc
 
 local floor, ceil, max, min, sqrt = math.floor, math.ceil, math.max, math.min, math.sqrt
 local format = string.format
@@ -23,13 +23,10 @@ local DEFAULTS = {
     enabled = true,
     showPanel = true,      -- the map buttons
     revealAll = false,     -- show the plain Questie icons everywhere (the near settings do not matter then)
-    allOpacity = 100,      -- % of the blob strength kept under the icons (fixed: the blob stays)
-    showNearPlayer = true, -- show the plain Questie icons near the character (instead of a blob)
+    showNearPlayer = true, -- show the plain Questie icons near the character (the blob stays under them)
     objPlayer = 10,        -- % of the map width around the character
-    playerOpacity = 100,   -- % of the blob strength kept under those icons
     showNearMouse = true,  -- ... and around the mouse cursor on the map
     objMouse = 10,         -- % of the map width around the mouse cursor
-    mouseOpacity = 100,    -- % of the blob strength kept under those icons
     hoverShow = true,      -- pointing at an icon: that objective shows its icons in every blob
     shiftFocus = true,     -- Shift while pointing (icon on the map, quest in the log): only that objective / quest shows
     logDetails = true,     -- a quest's details open in the quest log: only that quest shows on the map
@@ -123,10 +120,6 @@ local function initDB()
     if not isColor(ns.DB.colorAll) then ns.DB.colorAll = copyDefault("colorAll", DEFAULTS.colorAll) end
     ns.DB.objPlayer = min(max(floor(ns.DB.objPlayer), 1), 40)
     ns.DB.objMouse = min(max(floor(ns.DB.objMouse), 1), 40)
-    ns.DB.playerOpacity = min(max(ns.DB.playerOpacity, 0), 100)
-    ns.DB.allOpacity = min(max(ns.DB.allOpacity, 0), 100)
-    ns.DB.mouseOpacity = min(max(ns.DB.mouseOpacity, 0), 100)
-    ns.DB.playerOpacity, ns.DB.mouseOpacity, ns.DB.allOpacity = 100, 100, 100   -- the blob always stays under the icons
     ns.DB.blobAlpha = min(max(ns.DB.blobAlpha, 0.1), 0.8)
     if type(ns.DB.minimap) ~= "table" then ns.DB.minimap = { hide = false, minimapPos = 215 } end
 end
@@ -226,12 +219,6 @@ end
 ---------------------------------------------------------------------------
 -- Showing / hiding Questie's icons
 ---------------------------------------------------------------------------
-
--- % of the blob strength under the icons that show as plain Questie icons (near the player, or everywhere)
-local function nearOpacity()
-    if ns.DB.revealAll then return ns.DB.allOpacity or 0 end
-    return ns.DB.playerOpacity or 0
-end
 
 -- yards around the character inside which the plain icons show (-1 = never)
 local function playerYards()
@@ -594,7 +581,6 @@ local function restoreAll()
         end
     end
     QQ.blobs = nil
-    QQ.hover = {}
     if ns.heat then
         ns.heat._dsig = nil
         ns.heat:Hide()
@@ -614,7 +600,6 @@ ns.kindIcon = kindIcon
 ns.objKey = objKey
 ns.updateState = updateState
 ns.distYards = distYards
-ns.nearOpacity = nearOpacity
 ns.playerYards = playerYards
 ns.availForced = availForced
 ns.greenRange = greenRange

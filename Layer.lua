@@ -10,7 +10,6 @@ local applyHide = ns.applyHide
 local eachFrame = ns.eachFrame
 local heatColor = ns.heatColor
 local isHidden = ns.isHidden
-local nearOpacity = ns.nearOpacity
 local reportError = ns.reportError
 local wantHide = ns.wantHide
 
@@ -38,24 +37,15 @@ local function lootBandColor(band)
 end
 
 -- colour of one spot of a blob (see heatStep)
--- Spots near the player inside a merged blob carry NEAR_ADD on top of their class (NEAR_ONLY where the colour
--- has no class): the blob fades there (the "blob under the icons" strength) instead of splitting in two.
-local NEAR_ADD, NEAR_ONLY = 10000, 999999
 local function areaColor(h, col)
     if not h then return col end
-    local k
-    if h >= 5000 then
-        k = nearOpacity() / 100
-        if h == NEAR_ONLY then return { col[1], col[2], col[3], k } end
-        h = h - NEAR_ADD
-    end
-    local c
     if ns.DB.colorMode == "kind" then
-        if h >= 100 then c = lootBandColor(h) else c = ns.DB.colors[KIND_KEYS[h]] or col end
-    elseif ns.DB.colorMode == "level" then c = heatColor(h)
-    else c = col end
-    if k then return { c[1], c[2], c[3], k } end
-    return c
+        if h >= 100 then return lootBandColor(h) end
+        return ns.DB.colors[KIND_KEYS[h]] or col
+    elseif ns.DB.colorMode == "level" then
+        return heatColor(h)
+    end
+    return col
 end
 
 -- colour of a mix { class1, class2, share of class2 } (see buildFill)
@@ -63,25 +53,23 @@ local function mixColor(m, col)
     local c1 = areaColor(m[1], col)
     if not m[2] or m[3] <= 0 then return c1 end
     local c2, t = areaColor(m[2], col), m[3]
-    local a1, a2 = c1[4] or 1, c2[4] or 1
-    return { c1[1] + (c2[1] - c1[1]) * t, c1[2] + (c2[2] - c1[2]) * t, c1[3] + (c2[3] - c1[3]) * t, a1 + (a2 - a1) * t }
+    return { c1[1] + (c2[1] - c1[1]) * t, c1[2] + (c2[2] - c1[2]) * t, c1[3] + (c2[3] - c1[3]) * t }
 end
 
 -- a fill piece with a left-to-right colour gradient (newer clients take colour objects, older ones numbers)
 local function paintGradient(t, c1, c2, a)
-    local a1, a2 = a * (c1[4] or 1), a * (c2[4] or 1)
-    if c1[1] == c2[1] and c1[2] == c2[2] and c1[3] == c2[3] and a1 == a2 then
+    if c1[1] == c2[1] and c1[2] == c2[2] and c1[3] == c2[3] then
         if t._grad then t._grad = nil; t:SetVertexColor(1, 1, 1, 1) end
-        t:SetColorTexture(c1[1], c1[2], c1[3], a1)
+        t:SetColorTexture(c1[1], c1[2], c1[3], a)
         return
     end
     t:SetColorTexture(1, 1, 1, 1)
     t._grad = true
-    if CreateColor and t.SetGradient and pcall(t.SetGradient, t, "HORIZONTAL", CreateColor(c1[1], c1[2], c1[3], a1), CreateColor(c2[1], c2[2], c2[3], a2)) then return end
-    if t.SetGradientAlpha and pcall(t.SetGradientAlpha, t, "HORIZONTAL", c1[1], c1[2], c1[3], a1, c2[1], c2[2], c2[3], a2) then return end
+    if CreateColor and t.SetGradient and pcall(t.SetGradient, t, "HORIZONTAL", CreateColor(c1[1], c1[2], c1[3], a), CreateColor(c2[1], c2[2], c2[3], a)) then return end
+    if t.SetGradientAlpha and pcall(t.SetGradientAlpha, t, "HORIZONTAL", c1[1], c1[2], c1[3], a, c2[1], c2[2], c2[3], a) then return end
     t._grad = nil
     t:SetVertexColor(1, 1, 1, 1)
-    t:SetColorTexture((c1[1] + c2[1]) / 2, (c1[2] + c2[2]) / 2, (c1[3] + c2[3]) / 2, (a1 + a2) / 2)
+    t:SetColorTexture((c1[1] + c2[1]) / 2, (c1[2] + c2[2]) / 2, (c1[3] + c2[3]) / 2, a)
 end
 
 -- Questie's FakeShow/FakeHide are slow, so changes are queued and applied within a small time budget per frame.
@@ -135,37 +123,12 @@ local function flushPending(budgetMs)
         pendingN = 0
     end
 end
-local function bboxOf(c)
-    if not c.bx1 then
-        local x1, y1, x2, y2 = 1e9, 1e9, -1e9, -1e9
-        for _, r in ipairs(c.rects) do
-            if r[1] < x1 then x1 = r[1] end
-            if r[2] < y1 then y1 = r[2] end
-            if r[3] > x2 then x2 = r[3] end
-            if r[4] > y2 then y2 = r[4] end
-        end
-        c.bx1, c.by1, c.bx2, c.by2 = x1, y1, x2, y2
-    end
-    return c.bx1, c.by1, c.bx2, c.by2
-end
-
+-- colours a drawn blob: its fill pieces and its outline (the blob always stays, also under shown icons)
 local function lookBlob(f, blob)
     local c = blob.c
     if not c.t1 then return end
-    local hot = QQ.hover[blob.key] and true or false
-    local a = ns.DB.blobAlpha
-    local la = min(1, a * 3)   -- the outline follows the blob strength too
-    if not S.continent and not blob._focus then   -- a focused blob stays a plain blob: only the focus slider dims it
-        if blob.near then
-            local k = nearOpacity() / 100
-            a, la = a * k, la * k
-        elseif hot and not (f.mask and (ns.DB.mouseOpacity or 0) == 0) then
-            -- no mask: the blob under the cursor just gets paler (the setting, or a default dimming)
-            local k = (ns.DB.mouseOpacity or 0) > 0 and ns.DB.mouseOpacity / 100 or 0.35
-            a, la = a * k, la * k
-        end
-    end
-    a = min(a, 0.7)
+    local a = min(ns.DB.blobAlpha, 0.7)
+    local la = min(1, ns.DB.blobAlpha * 3)   -- the outline follows the blob strength too
     local col = c.col
     local heatOn = ns.DB.colorMode ~= "single" or c.heat
     for i = c.t1, c.t2 do
@@ -175,42 +138,20 @@ local function lookBlob(f, blob)
         else
             local hc = heatOn and areaColor(t._h, col) or col
             if t._grad then t._grad = nil; t:SetVertexColor(1, 1, 1, 1) end
-            t:SetColorTexture(hc[1], hc[2], hc[3], a * (hc[4] or 1))
+            t:SetColorTexture(hc[1], hc[2], hc[3], a)
         end
     end
     local er, eg, eb = (col[1] + 1) / 2, (col[2] + 1) / 2, (col[3] + 1) / 2
-    if f._cx and (f._cr or 0) > 1 and not S.continent then
-        -- outline segments dissolve around the mouse like the fill does (clear inside half the radius)
-        local rad, cx, cy = f._cr, f._cx, f._cy
-        for i = c.l1, c.l2 do
-            local dx, dy = f.lmx[i] - cx, f.lmy[i] - cy
-            local d = sqrt(dx * dx + dy * dy) / rad
-            local k = 1
-            if d <= 0.5 then k = 0 elseif d < 1 then local t = (d - 0.5) * 2; k = t * t * (3 - 2 * t) end
-            local op = (ns.DB.mouseOpacity or 0) / 100
-            if op > 0 then k = op + (1 - op) * k end   -- the outline keeps that much of its strength inside the circle
-            local ln = f.lines[i]
-            if heatOn and ln._h then
-                local hc = areaColor(ln._h, col)
-                ln:SetColorTexture((hc[1] + 1) / 2, (hc[2] + 1) / 2, (hc[3] + 1) / 2, la * k)
-            else
-                ln:SetColorTexture(er, eg, eb, la * k)
-            end
-        end
-    else
-        for i = c.l1, c.l2 do
-            local ln = f.lines[i]
-            if heatOn and ln._h then
-                local hc = areaColor(ln._h, col)
-                ln:SetColorTexture((hc[1] + 1) / 2, (hc[2] + 1) / 2, (hc[3] + 1) / 2, la)
-            else
-                ln:SetColorTexture(er, eg, eb, la)
-            end
+    for i = c.l1, c.l2 do
+        local ln = f.lines[i]
+        if heatOn and ln._h then
+            local hc = areaColor(ln._h, col)
+            ln:SetColorTexture((hc[1] + 1) / 2, (hc[2] + 1) / 2, (hc[3] + 1) / 2, la)
+        else
+            ln:SetColorTexture(er, eg, eb, la)
         end
     end
 end
-
-local MASK_PATH = "Interface\\AddOns\\BlobsForQuestie\\Icons\\mask.png"
 
 local function ensureHeat()
     if ns.heat then return ns.heat end
@@ -219,22 +160,13 @@ local function ensureHeat()
     ns.heat:SetAllPoints(canvas)
     ns.heat:SetFrameLevel((canvas:GetFrameLevel() or 1) + 30)
     ns.heat:EnableMouse(false)
-    if ns.heat.CreateMaskTexture then
-        local m = ns.heat:CreateMaskTexture()
-        if type(m) == "table" and m.SetTexture then
-            m:SetTexture(MASK_PATH, "CLAMP", "CLAMP")   -- CLAMP: outside the picture the opaque edge continues
-            m:SetSize(1, 1)
-            m:SetPoint("TOPLEFT", ns.heat, "TOPLEFT", -50, 50)
-            ns.heat.mask = m
-        end
-    end
     ns.heat.tex, ns.heat.lines = {}, {}
     do   -- can textures be bent (vertex offsets)? then the fill follows the outline exactly
         local probe = ns.heat:CreateTexture()
         ns.heat.voOK = type(probe) == "table" and probe.SetVertexOffset ~= nil
         probe:Hide()
     end
-    ns.heat.lmx, ns.heat.lmy = {}, {}   -- midpoint of every outline segment (for the fade around the mouse)
+    ns.heat.lmx, ns.heat.lmy = {}, {}   -- midpoint of every outline segment (the minimap clips with them)
     ns.heat:SetScript("OnUpdate", function(self, elapsed) QQ:HoverTick(self, elapsed) end)
     ns.heat:Hide()
     return ns.heat
@@ -372,8 +304,8 @@ local function drawBlobs(f, list, W, H)
         c.l2 = li
     end
     for _, blob in ipairs(list) do
-        if blob.noDraw or (blob.near and not S.continent and nearOpacity() <= 0) then
-            blob.c.t1 = nil   -- within the detail distance the icons are shown, no blob
+        if blob.noDraw then
+            blob.c.t1 = nil   -- available quests: no blob, they only follow the near / mouse rules
         else
             local ti0, li0 = ti, li
             local ok, err = pcall(drawOne, blob)
@@ -395,7 +327,7 @@ local function updateLayer(list, W, H)
     local parts = {}
     for i, b in ipairs(list) do parts[i] = b.key .. (b.near and "n" or "f") .. (b.noDraw and "x" or "") .. (b.c.gid or 0) end
     table.sort(parts)
-    local sig = format("%s|%d|%d|%s|", tostring(S.viewMap), floor(W), floor(H), (nearOpacity() > 0 and "p" or "")) .. table.concat(parts, ";")
+    local sig = format("%s|%d|%d|", tostring(S.viewMap), floor(W), floor(H)) .. table.concat(parts, ";")
     local nowT = GetTime and GetTime() or 0
     if f._dsig ~= sig or nowT - (f._dT or 0) > 10 then   -- redraw on change, and every 10 s as a safety net
         f._dsig = nil
@@ -411,7 +343,6 @@ end
 local function hideLayer()
     if QQ.ClearCursor then QQ:ClearCursor() end
     QQ.blobs = nil
-    QQ.hover = {}
     flushPending(1e9)   -- the layer's OnUpdate works the queue off; once it is hidden, apply what still waits now
     if ns.heat then
         ns.heat._cx = nil
@@ -421,27 +352,9 @@ local function hideLayer()
 end
 
 ---------------------------------------------------------------------------
--- Cursor: icons within the detail distance of the mouse appear, the blob under them fades
+-- Cursor: icons of far blobs within the detail distance of the mouse show as plain Questie icons
+-- (Questie's own tooltips); the blob stays under them.
 ---------------------------------------------------------------------------
-
--- The detail distance also applies around the mouse cursor: icons of far blobs that lie within it show as
--- plain Questie icons (Questie's own tooltips), and the blob under them fades.
-
--- The mask is a picture that is opaque everywhere except a soft hole in the middle.
--- Hole fully clear inside 0.5 x radius, fully opaque again at 1 x radius (the picture's hole is 0.1..0.2 of its width).
-local function aimMask(f, px, py, rad)
-    local m = f.mask
-    if not m then return end
-    m:ClearAllPoints()
-    if px and (ns.DB.mouseOpacity or 0) == 0 and rad and rad > 1 then
-        local size = rad * 5
-        m:SetSize(size, size)
-        m:SetPoint("CENTER", f, "TOPLEFT", px, -py)
-    else
-        m:SetSize(1, 1)
-        m:SetPoint("TOPLEFT", f, "TOPLEFT", -50, 50)   -- parked outside: the edge of the picture is opaque
-    end
-end
 
 local applyFocus
 local function refocusOthers()   -- available / turn-in icons follow the focus
@@ -453,10 +366,8 @@ local function refocusOthers()   -- available / turn-in icons follow the focus
     end)
 end
 local function clearCursor(f)
-    if QQ.focusKey or QQ.hoverObj then applyFocus(f, nil) end
-    aimMask(f, nil)
+    if QQ.focusKey or QQ.hoverObj then applyFocus(nil) end
     f._cx, f._cy, f._hovKey, f._shift = nil, nil, nil, nil
-    QQ.hover = {}
     local blobs = QQ.blobs
     if not blobs then return end
     for _, b in ipairs(blobs) do
@@ -465,10 +376,6 @@ local function clearCursor(f)
             if it.f._qqCur then it.f._qqCur = nil; any = true end
         end
         if any then setBlobShown(b, b.near) end
-        if any or b._lineAff then
-            b._lineAff = nil
-            lookBlob(f, b)
-        end
     end
 end
 
@@ -490,30 +397,12 @@ local function hoveredObjective()
     return d.Id .. ":" .. d.ObjectiveIndex
 end
 
--- Pointing at an icon or picking a quest in the log: the blobs holding that objective / quest turn pale (the
--- "focus" slider), and in "show only it" / the quest log the other Questie icons hide. Blobs never hide.
-function applyFocus(f, key, shift)
+-- Pointing at an icon with Shift held or picking a quest in the log: only that objective's / quest's Questie
+-- icons stay, the others (quest givers and turn-ins too) hide. Blobs never hide.
+function applyFocus(key, shift)
     QQ.hoverObj = key
     QQ.focusKey = shift and key or nil   -- Shift held: only that objective's icons stay
-    local fq, fo = QQ.focusQuest, QQ.hoverObj
-    for _, b in ipairs(QQ.blobs or {}) do
-        local has = false
-        if fq then
-            for _, it in ipairs(b.items) do
-                if it.f.data and it.f.data.Id == fq then has = true; break end
-            end
-        elseif fo then
-            for _, it in ipairs(b.items) do
-                if objectiveKeyOf(it.f) == fo then has = true; break end
-            end
-        end
-        local foc = has or nil
-        setBlobShown(b, b.near)
-        if (b._focus or false) ~= (foc or false) then
-            b._focus = foc
-            lookBlob(f, b)
-        end
-    end
+    for _, b in ipairs(QQ.blobs or {}) do setBlobShown(b, b.near) end
     refocusOthers()
 end
 
@@ -581,7 +470,7 @@ function QQ:HoverTick(f, elapsed)
     end
     if qf ~= QQ.focusQuest then
         QQ.focusQuest = qf
-        applyFocus(f, f._hovKey, f._shift)
+        applyFocus(f._hovKey, f._shift)
     end
 
     local sc = WorldMapFrame and WorldMapFrame.ScrollContainer
@@ -603,39 +492,27 @@ function QQ:HoverTick(f, elapsed)
         local px = ((cx / s) - left) / w * f._W
         local py = (top - (cy / s)) / h * f._H
         local rad = around and (ns.DB.objMouse or 0) / 100 * f._W or 0     -- distances are % of the map width: canvas pixels
-        local moved = (not f._cx) or ((px - f._cx) ^ 2 + (py - f._cy) ^ 2) > 25 or f._cr ~= rad or f._cdirty or f._hovKey ~= hovKey or f._shift ~= shift
+        local moved = (not f._cx) or ((px - f._cx) ^ 2 + (py - f._cy) ^ 2) > 25 or f._cr ~= rad or f._hovKey ~= hovKey or f._shift ~= shift
         if not moved then return end
         local keyChanged = f._hovKey ~= hovKey or f._shift ~= shift
-        f._cx, f._cy, f._cr, f._cdirty, f._hovKey, f._shift = px, py, rad, nil, hovKey, shift
-        if keyChanged then applyFocus(f, hovKey, shift and hovKey ~= nil) end
-        if QQ.hoverObj or QQ.focusQuest then aimMask(f, nil) else aimMask(f, px, py, rad) end   -- focus: no fading hole
+        f._cx, f._cy, f._cr, f._hovKey, f._shift = px, py, rad, hovKey, shift
+        if keyChanged then applyFocus(hovKey, shift and hovKey ~= nil) end
         local r2 = rad * rad
         local W, H = f._W, f._H
         for _, b in ipairs(blobs) do
             if not b.near then
-                local any, changed = false, false
+                local changed = false
                 for _, it in ipairs(b.items) do
                     local fr = it.f
                     local dx, dy = (fr.x or 0) / 100 * W - px, (fr.y or 0) / 100 * H - py
                     local on = rad > 0 and (dx * dx + dy * dy) <= r2
                     if not on and hovKey then   -- the same objective as the hovered icon
                         local d = fr.data
-                        on = d and d.Id and d.ObjectiveIndex ~= nil and (d.Id .. ":" .. d.ObjectiveIndex) == hovKey
+                        on = (d and d.Id and d.ObjectiveIndex ~= nil and (d.Id .. ":" .. d.ObjectiveIndex) == hovKey) and true or false
                     end
-                    if on then any = true end
                     if (fr._qqCur or false) ~= on then fr._qqCur = on or nil; changed = true end
                 end
                 if changed then setBlobShown(b, false) end
-                -- the outline fade follows the cursor: redo the blobs under or just left by the circle
-                local bx1, by1, bx2, by2 = bboxOf(b.c)
-                local hit = px > bx1 - rad and px < bx2 + rad and py > by1 - rad and py < by2 + rad
-                if any ~= (QQ.hover[b.key] or false) then
-                    QQ.hover[b.key] = any or nil
-                    lookBlob(f, b)
-                elseif hit or b._lineAff then
-                    lookBlob(f, b)
-                end
-                b._lineAff = hit or nil
             end
         end
     elseif f._cx and (now - (f._hotT or 0)) > 0.3 then
@@ -646,8 +523,6 @@ end
 
 ns.KIND_KEYS = KIND_KEYS
 ns.lootBandColor = lootBandColor
-ns.NEAR_ADD = NEAR_ADD
-ns.NEAR_ONLY = NEAR_ONLY
 ns.setBlobShown = setBlobShown
 ns.lookBlob = lookBlob
 ns.drawBlobs = drawBlobs

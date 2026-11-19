@@ -33,10 +33,7 @@ local function setup()
 
     if WorldMapFrame then
         WorldMapFrame:HookScript("OnShow", function() C_Timer.After(0.05, safeScan) end)
-        WorldMapFrame:HookScript("OnHide", function()
-            QQ.hover = {}
-            QQ:ClearCursor()
-        end)
+        WorldMapFrame:HookScript("OnHide", function() QQ:ClearCursor() end)
         if WorldMapFrame.OnMapChanged then
             hooksecurefunc(WorldMapFrame, "OnMapChanged", function() C_Timer.After(0.05, safeScan) end)
         end
