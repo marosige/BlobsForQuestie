@@ -125,8 +125,10 @@ local function scanZone()
         elseif t == "available" or OBJECTIVE_TYPES[t] then
             if questieHides(f, true) then return end
             if other then
-                -- belongs to another map: not drawn here; just don't leave it hidden from an earlier view
-                if f._qqHid then f._qqHide = nil; applyHide(f, false) end
+                -- belongs to another map (a city inside this zone, or a neighbouring zone that is not hidden): not part
+                -- of the blobs here, it shows as a plain icon. _qqHide = false so the hooks agree until the next scan.
+                f._qqHide = false
+                if f._qqHid then applyHide(f, false) end
                 return
             end
             local px, py = f.x * W / 100, f.y * H / 100
@@ -421,6 +423,9 @@ local function miniRestore()
     if mini then mini:Hide() end
 end
 
+-- a minimap icon handed back to Questie's pool: give it back as it was (the next icon drawn on it starts fresh)
+ns.forgetHooks[#ns.forgetHooks + 1] = function(f) miniHide(f, false) end
+
 local function ensureMini()
     if mini then return mini end
     mini = CreateFrame("Frame", "BlobsForQuestieMinimap", Minimap)
@@ -482,7 +487,10 @@ function QQ:MinimapTick()
         for _, names in pairs(ns.QuestieMap.questIdFrames) do
             for _, name in pairs(names) do
                 local f = _G[name]
-                if f and f.miniMapIcon and f.data and f.UiMapID and f.x and f.y then miniList[#miniList + 1] = f end
+                if f and f.miniMapIcon and f.data and f.UiMapID and f.x and f.y then
+                    ns.hookUnload(f)
+                    miniList[#miniList + 1] = f
+                end
             end
         end
         for f in pairs(miniHidden) do   -- recycled frames that are no longer minimap icons
@@ -490,16 +498,21 @@ function QQ:MinimapTick()
         end
     end
     local px, py, pinst = ns.HBD:GetPlayerWorldPosition()
-    if not px then return end
+    local rot = GetCVar("rotateMinimap") == "1"
+    local facing = 0
+    if rot then facing = GetPlayerFacing and GetPlayerFacing() end
+    if not px or not facing then
+        -- no position (inside an instance) or no facing: nothing can be placed, so the minimap stays as Questie
+        -- draws it instead of keeping the last blobs
+        if next(miniHidden) or (mini and mini:IsShown()) then miniRestore() end
+        return
+    end
     local radius = miniRadius()
     local halfW, halfH = Minimap:GetWidth() / 2, Minimap:GetHeight() / 2
     local nearY
     if ns.DB.revealAll then nearY = 1e9
     elseif ns.DB.showNearPlayer then nearY = (ns.DB.objPlayer or 0) / 100 * radius * 2
     else nearY = -1 end
-    local rot = GetCVar("rotateMinimap") == "1"
-    local facing = rot and GetPlayerFacing and GetPlayerFacing() or 0
-    if rot and not facing then return end
     local sn, cs = math.sin(facing), math.cos(facing)
     local plevel = UnitLevel("player") or 1
     local groups, sig = {}, {}

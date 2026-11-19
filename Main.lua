@@ -111,7 +111,8 @@ local function setup()
         local px, py = 0, 0
         local x, y = ns.HBD:GetPlayerZonePosition()
         if x and y then px, py = floor(x * 200), floor(y * 200) end
-        local sig = format("%s|%d|%d|%d", tostring(WorldMapFrame.GetMapID and WorldMapFrame:GetMapID()), frames, px, py)
+        -- QQ.unloads: Questie gave icon frames back to its pool (it redraws them), even if their count stays the same
+        local sig = format("%s|%d|%d|%d|%d", tostring(WorldMapFrame.GetMapID and WorldMapFrame:GetMapID()), frames, px, py, QQ.unloads or 0)
         if sig ~= QQ._tickSig then
             QQ._tickSig = sig
             safeScan()

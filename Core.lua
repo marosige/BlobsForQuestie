@@ -375,26 +375,25 @@ end
 local entrances
 local function entranceTable()
     if entrances then return entrances end
-    entrances = {}
     local zdb = QuestieLoader and QuestieLoader:ImportModule("ZoneDB")
-    if zdb and zdb.GetDungeons and zdb.GetUiMapIdByAreaId then
-        local ok, dungeons = pcall(zdb.GetDungeons, zdb)
-        if ok and type(dungeons) == "table" then
-            for _, d in pairs(dungeons) do
-                local locs = type(d) == "table" and d[4]
-                if type(locs) == "table" then
-                    for _, loc in ipairs(locs) do
-                        local okm, map = pcall(zdb.GetUiMapIdByAreaId, zdb, loc[1])
-                        if okm and map and loc[2] and loc[3] then
-                            local l = entrances[map]
-                            if not l then l = {}; entrances[map] = l end
-                            l[#l + 1] = { loc[2], loc[3] }
-                        end
-                    end
+    if not (zdb and zdb.GetDungeons and zdb.GetUiMapIdByAreaId) then return {} end
+    local ok, dungeons = pcall(zdb.GetDungeons, zdb)
+    if not ok or type(dungeons) ~= "table" then return {} end   -- Questie's zone data is not loaded yet: ask again later
+    local t = {}
+    for _, d in pairs(dungeons) do
+        local locs = type(d) == "table" and d[4]
+        if type(locs) == "table" then
+            for _, loc in ipairs(locs) do
+                local okm, map = pcall(zdb.GetUiMapIdByAreaId, zdb, loc[1])
+                if okm and map and loc[2] and loc[3] then
+                    local l = t[map]
+                    if not l then l = {}; t[map] = l end
+                    l[#l + 1] = { loc[2], loc[3] }
                 end
             end
         end
     end
+    entrances = t
     return entrances
 end
 
@@ -462,6 +461,13 @@ end
 -- The original ShouldBeHidden does several database lookups, so the answer is cached per frame;
 -- scans ask for a fresh one, the hover queue reuses it.
 local function questieHides(f, fresh)
+    local d = f.data
+    if not d then return true end   -- unloaded meanwhile (back in Questie's pool): not ours to touch
+    if d.Type == "manual" then
+        -- town icons follow only Questie's map switches; Questie never asks ShouldBeHidden for them
+        local p = Questie and Questie.db and Questie.db.profile
+        return p and (p.enabled == false or p.enableMapIcons == false) or false
+    end
     if fresh or f._qqQH == nil then
         f._qqQH = (f._qqOrig and f:_qqOrig() and true or false)
     end
@@ -499,35 +505,66 @@ local function applyHide(f, hide, fresh)
     end
 end
 
+-- Questie recycles its icon frames: Unload hands a frame back to its pool, and the pool gives the next icon
+-- drawn on it a new OnShow script and its alpha back. What we kept on the frame belonged to the old icon.
+local forgetHooks = {}   -- other files forget what they keep per frame here (the minimap)
+local function forgetFrame(f)
+    if f._qqAlpha ~= nil then f:SetAlpha(f._qqAlpha); f:EnableMouse(true) end
+    local tex = f.texture
+    if f._qqTint and type(tex) == "table" and tex.SetDesaturated then tex:SetDesaturated(false) end
+    f._qqAlpha, f._qqHid, f._qqHide, f._qqQH, f._qqCur, f._qqwx = nil, nil, nil, nil, nil, nil
+    f._qqTint, f._qqTex, f._qqSetTex, f._qqRGB = nil, nil, nil, nil
+    f._qqShowHook = nil   -- Unload cleared the OnShow script, and our hook with it
+    for _, fn in ipairs(forgetHooks) do fn(f) end
+    QQ.unloads = (QQ.unloads or 0) + 1   -- the map ticker rescans once Questie has redrawn icons
+end
+
+local function hookUnload(f)
+    if f._qqUnloadHook or type(f.Unload) ~= "function" then return end
+    f._qqUnloadHook = true
+    hooksecurefunc(f, "Unload", function(self)
+        if not self._needsUnload then forgetFrame(self) end   -- _needsUnload: still in Questie's draw queue, unloaded later
+    end)
+end
+
 local function hookFrame(f)
-    if f._qqHooked then return end
-    f._qqHooked = true
-    f._qqOrig = f.ShouldBeHidden
-    f.ShouldBeHidden = function(self)
-        if self._qqOrig and self:_qqOrig() then return true end
-        if ns.DB and ns.DB.enabled and S.viewMap then return wantHide(self) and true or false end
-        return false
-    end
-    -- Shift + click on an objective / turn-in icon: open that quest's details in the quest log.
-    if f.HookScript and f.GetScript and f:GetScript("OnClick") then
-        f:HookScript("OnClick", function(self, button)
-            local d = self.data
-            if button ~= "LeftButton" or self.miniMapIcon or type(d) ~= "table" or type(d.Id) ~= "number" then return end
-            if not (ns.DB and ns.DB.enabled and ns.DB.shiftFocus and IsShiftKeyDown and IsShiftKeyDown()) then return end
-            if d.Type == "available" or d.Type == "manual" or not d.QuestData then return end
-            if ChatEdit_GetActiveWindow and ChatEdit_GetActiveWindow() then return end   -- Questie links the quest there
-            if InCombatLockdown and InCombatLockdown() then return end
-            if QuestMapFrame_OpenToQuestDetails then pcall(QuestMapFrame_OpenToQuestDetails, d.Id) end
-        end)
+    if not f._qqHooked then
+        f._qqHooked = true
+        f._qqOrig = f.ShouldBeHidden
+        f.ShouldBeHidden = function(self)
+            if self._qqOrig and self:_qqOrig() then return true end
+            if self.miniMapIcon then return false end   -- the minimap has rules of its own (see Minimap)
+            if ns.DB and ns.DB.enabled and S.viewMap and wantHide(self) then
+                self._qqHid = true   -- Questie hides it now because of us: a scan (or /blob off) may show it again
+                return true
+            end
+            return false
+        end
+        -- Shift + click on an objective / turn-in icon: open that quest's details in the quest log.
+        if f.HookScript and f.GetScript and f:GetScript("OnClick") then
+            f:HookScript("OnClick", function(self, button)
+                local d = self.data
+                if button ~= "LeftButton" or self.miniMapIcon or type(d) ~= "table" or type(d.Id) ~= "number" then return end
+                if not (ns.DB and ns.DB.enabled and ns.DB.shiftFocus and IsShiftKeyDown and IsShiftKeyDown()) then return end
+                if d.Type == "available" or d.Type == "manual" or not d.QuestData then return end
+                if ChatEdit_GetActiveWindow and ChatEdit_GetActiveWindow() then return end   -- Questie links the quest there
+                if InCombatLockdown and InCombatLockdown() then return end
+                if QuestMapFrame_OpenToQuestDetails then pcall(QuestMapFrame_OpenToQuestDetails, d.Id) end
+            end)
+        end
+        hookUnload(f)
     end
     -- If Questie / HereBeDragons shows an icon we want hidden, hide it again right away.
-    f:HookScript("OnShow", function(self)
-        if self._qqAlpha ~= nil then self:SetAlpha(0) end
-        if ns.DB and ns.DB.enabled and S.viewMap and not self.hidden and self._qqAlpha == nil and not self.miniMapIcon
-            and self.FakeHide and self.data and wantHide(self) then
-            applyHide(self, true)
-        end
-    end)
+    if not f._qqShowHook then
+        f._qqShowHook = true
+        f:HookScript("OnShow", function(self)
+            if self._qqAlpha ~= nil then self:SetAlpha(0) end
+            if ns.DB and ns.DB.enabled and S.viewMap and not self.hidden and self._qqAlpha == nil and not self.miniMapIcon
+                and self.FakeHide and self.data and wantHide(self) then
+                applyHide(self, true)
+            end
+        end)
+    end
 end
 
 local function eachFrame(fn)
@@ -592,5 +629,7 @@ ns.questieHides = questieHides
 ns.isHidden = isHidden
 ns.applyHide = applyHide
 ns.hookFrame = hookFrame
+ns.hookUnload = hookUnload
+ns.forgetHooks = forgetHooks
 ns.eachFrame = eachFrame
 ns.restoreAll = restoreAll

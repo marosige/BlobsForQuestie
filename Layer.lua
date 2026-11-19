@@ -412,6 +412,7 @@ local function hideLayer()
     if QQ.ClearCursor then QQ:ClearCursor() end
     QQ.blobs = nil
     QQ.hover = {}
+    flushPending(1e9)   -- the layer's OnUpdate works the queue off; once it is hidden, apply what still waits now
     if ns.heat then
         ns.heat._cx = nil
         ns.heat._dsig = nil
