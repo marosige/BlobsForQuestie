@@ -112,7 +112,7 @@ local function makeSlider(parent, x, y, w, label, tip, minV, maxV, step, show, g
         text:SetPoint("BOTTOMLEFT", sl, "TOPLEFT", 2, 2)
         text:SetText(inline and "" or label)
     end
-    local val = sl:CreateFontString(nil, "OVERLAY", "GameFontNormal")
+    local val = sl:CreateFontString(nil, "OVERLAY", inline and "GameFontHighlight" or "GameFontNormal")   -- inline: white like its row
     if inline then val:SetPoint("LEFT", sl, "RIGHT", 8, 0) else val:SetPoint("BOTTOMRIGHT", sl, "TOPRIGHT", -2, 2) end
     sl._refreshing = false
     sl:SetScript("OnValueChanged", function(self, v)

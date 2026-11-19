@@ -428,7 +428,6 @@ local function buildGUI()
     local function plainCheck(y, key, label, tip, after, w)
         w = w or 240
         local cb = check(p, y, key, label, tip, after)
-        cb.label:SetFontObject("GameFontNormal")
         cb.label:SetWidth(w)
         cb:SetHitRectInsets(0, -w, 0, 0)
         return cb
