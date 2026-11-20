@@ -65,6 +65,7 @@ local function buildPanel()
         ns.DB.enabled = not ns.DB.enabled
         safeScan()
         QQ:RefreshGUI()
+        if GameTooltip:IsOwned(main) then main:GetScript("OnEnter")(main) end   -- the tooltip shows the new state
     end)
     main:SetScript("OnEnter", function(self)
         GameTooltip:SetOwner(self, "ANCHOR_RIGHT")
@@ -116,6 +117,7 @@ local function buildPanel()
             toggle()
             safeScan()
             QQ:RefreshGUI()
+            if GameTooltip:IsOwned(b) then b:GetScript("OnEnter")(b) end   -- the tooltip shows the new state
         end)
         b:SetScript("OnEnter", function(self)
             local on = isOn()
