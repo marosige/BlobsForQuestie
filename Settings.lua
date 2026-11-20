@@ -378,7 +378,8 @@ local function buildGUI()
     do
         local box2 = mapStrip(p, 0.5)
         local killIcon = questieIcon(kindIcon(1))
-        local ICON_POS = { { -86, -4 }, { -68, 16 }, { -50, -16 }, { -30, 6 }, { -12, -18 }, { 6, 16 }, { 22, -4 }, { 40, -20 }, { 56, 12 }, { 74, -8 }, { 90, 8 } }
+        -- all inside the blob's shape (with room for the icon), spread by distance from its middle so the radius shows
+        local ICON_POS = { { 0, 0 }, { -21, 0 }, { 17, 20 }, { 30, -20 }, { 46, 7 }, { -52, -16 }, { -60, 15 }, { -70, -3 } }
         local function scene(cx, marker, key, distKey, caption)
             local sc = {}
             local function blobTex(layer, file)
