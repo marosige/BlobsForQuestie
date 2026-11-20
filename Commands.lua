@@ -19,6 +19,7 @@ local function help()
         "/blob buttons [on|off]  -  the map buttons on the world map",
         "/blob avail [on|off]  -  all available quests (off: only nearby ones)",
         "/blob drop [on|off]  -  quests started by a dropped item",
+        "/blob zones [on|off]  -  Questie icons of neighbouring zones on a zone map",
         "/blob color [one|level|kind]  -  how blobs are colored (no word: next)",
         "/blob group [objective|all|color]  -  how blobs are grouped (no word: next)",
         "/blob debug  -  what the addon found and how it runs (paste this when reporting a problem)",
@@ -150,6 +151,10 @@ local function slash(msg)
         local on = wanted(arg, not ns.DB.hideItemStarts)
         ns.DB.hideItemStarts = not on
         say("quests started by a drop: " .. (on and "shown" or "hidden"))
+    elseif cmd == "zones" or cmd == "neighbours" or cmd == "neighbors" then
+        local on = wanted(arg, not ns.DB.hideOtherZones)
+        ns.DB.hideOtherZones = not on
+        say("neighbouring zones on a zone map: " .. (on and "shown" or "hidden"))
     elseif cmd == "group" or cmd == "grouping" then
         local MODES = { "quest", "color", "all" }
         local mode = ({ quest = "quest", objective = "quest", all = "all", unified = "all", color = "color", colour = "color" })[arg]

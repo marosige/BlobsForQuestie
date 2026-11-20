@@ -636,7 +636,7 @@ local function buildGUI()
             if icon then if v then icon:Show("BlobsForQuestie") else icon:Hide("BlobsForQuestie") end end
         end, 130)
     makeCheck(f, PAD + 126, -(GUI_H - 34), "Map buttons",
-        "Adds a round button below Questie's button on the world map, with a small bar next to it: the addon on or off, all or only nearby available quests, quests started by a drop, the blob color and the grouping.",
+        "Adds a round button below Questie's button on the world map, with a small bar next to it: the addon on or off, all or only nearby available quests, quests started by a drop, the neighbouring zones, the blob color and the grouping.",
         function() return ns.DB.showPanel end,
         function(v) ns.DB.showPanel = v; QQ:ApplyPanel() end, 110)
 

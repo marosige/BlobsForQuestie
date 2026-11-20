@@ -30,7 +30,7 @@ local function buildPanel()
     local f = CreateFrame("Frame", "BlobsForQuestiePanel", host)
     local ARROW = 16   -- width of the fold arrow, right of the addon switch
     local function px(i) return ARROW + 8 + (i - 2) * 26 end   -- x of button i (the addon switch is the round button)
-    local OPEN_W = ARROW + 8 + 3 * 26 + 20 + 6
+    local OPEN_W = ARROW + 8 + 4 * 26 + 20 + 6
     f:SetSize(OPEN_W, 28)
     f:SetFrameLevel(min((host:GetFrameLevel() or 1) + 500, 9000))   -- above the map's pins
     f:EnableMouse(true)
@@ -137,16 +137,20 @@ local function buildPanel()
     switch(3, questieIcon(2), questieIcon(4), "Quests started by a drop",
         "Available quests that start from a dropped item are shown.", "Available quests that start from a dropped item are hidden.",
         function() return not ns.DB.hideItemStarts end, function() ns.DB.hideItemStarts = not ns.DB.hideItemStarts end)
+    -- the neighbouring zones' Questie icons on a zone map: coloured = shown like the zone's own, grey = left empty
+    switch(4, ICONS .. "zones.png", nil, "Neighbouring zones",
+        "A zone map also shows the Questie icons of the zones around it.", "A zone map shows only its own Questie icons.",
+        function() return not ns.DB.hideOtherZones end, function() ns.DB.hideOtherZones = not ns.DB.hideOtherZones end)
 
-    -- 4: blob colour, steps through the three modes. Its picture is always a blob in the mode's colours, with a
+    -- 5: blob colour, steps through the three modes. Its picture is always a blob in the mode's colours, with a
     -- sign for what they mean: none (one color), a ! (by quest level), Questie's loot bag (by objective)
     do
         local MODES = { "single", "level", "kind" }
         local NAMES = { single = "One color", level = "By quest level", kind = "By objective" }
         local b = CreateFrame("Button", nil, f)
         b:SetSize(20, 20)
-        b:SetPoint("LEFT", px(4), 0)
-        panelBtns[4] = b
+        b:SetPoint("LEFT", px(5), 0)
+        panelBtns[5] = b
         -- the blob in the mode's colours (two halves, each a gradient), its outline, and a sign on top
         local halves = {}
         for k = 1, 2 do
@@ -202,12 +206,12 @@ local function buildPanel()
         end
     end
 
-    -- 5: grouping: one blob per objective -> one unified blob per color -> one unified blob
+    -- 6: grouping: one blob per objective -> one unified blob per color -> one unified blob
     do
         local b = CreateFrame("Button", nil, f)
         b:SetSize(20, 20)
-        b:SetPoint("LEFT", px(5), 0)
-        panelBtns[5] = b
+        b:SetPoint("LEFT", px(6), 0)
+        panelBtns[6] = b
         local one = b:CreateTexture(nil, "ARTWORK")   -- unified: one wide blob
         one:SetTexture(ICONS .. "blobwide.png")
         one:SetSize(24, 14)
@@ -266,7 +270,7 @@ local function buildPanel()
         at:SetTexture(ICONS .. "arrow.png")
         local function layout()
             local folded = ns.DB.panelCollapsed and true or false
-            for i = 2, 5 do if panelBtns[i] then panelBtns[i]:SetShown(not folded) end end
+            for i = 2, 6 do if panelBtns[i] then panelBtns[i]:SetShown(not folded) end end
             bar:SetShown(not folded)
             f:SetWidth(folded and (ARROW + 6) or OPEN_W)
             if folded then at:SetTexCoord(1, 0, 0, 1) else at:SetTexCoord(0, 1, 0, 1) end   -- open: points left; folded: points right
