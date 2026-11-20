@@ -348,7 +348,7 @@ local function buildGUI()
 
     makeHeader(p, X, -PH - 192, "Blob grouping")
     makeSegmented(p, X, -PH - 214, CW, {
-        { "quest", "One blob per quest", "Every quest objective gets a blob of its own. Where objectives are close, their blobs overlap." },
+        { "quest", "One blob per objective", "Every quest objective gets a blob of its own: a quest that asks for several things (say wolves and their pelts) has one blob for each. Where objectives are close, their blobs overlap." },
         { "all", "Unified", "Objectives close to each other share one blob. Each part of it keeps its own color, blending into the next." },
         { "color", "Unified by color", "Objectives of the same color share one blob, so every color forms blobs of its own." },
     }, function() return ns.DB.groupMode end, function(v) ns.DB.groupMode = v end)

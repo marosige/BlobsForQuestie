@@ -20,7 +20,7 @@ local function help()
         "/blob avail [on|off]  -  all available quests (off: only nearby ones)",
         "/blob drop [on|off]  -  quests started by a dropped item",
         "/blob color [one|level|kind]  -  how blobs are colored (no word: next)",
-        "/blob group [quest|all|color]  -  how blobs are grouped (no word: next)",
+        "/blob group [objective|all|color]  -  how blobs are grouped (no word: next)",
         "/blob debug  -  what the addon found and how it runs (paste this when reporting a problem)",
         "Without on / off a setting flips. These are the same switches as the map buttons.",
     }
@@ -152,14 +152,14 @@ local function slash(msg)
         say("quests started by a drop: " .. (on and "shown" or "hidden"))
     elseif cmd == "group" or cmd == "grouping" then
         local MODES = { "quest", "all", "color" }
-        local mode = ({ quest = "quest", all = "all", unified = "all", color = "color", colour = "color" })[arg]
+        local mode = ({ quest = "quest", objective = "quest", all = "all", unified = "all", color = "color", colour = "color" })[arg]
         if not mode then
             local nxt = 1
             for n, m in ipairs(MODES) do if m == ns.DB.groupMode then nxt = n % #MODES + 1 end end
             mode = MODES[nxt]
         end
         ns.DB.groupMode = mode
-        say("grouping: " .. ({ quest = "one blob per quest", all = "unified blobs", color = "unified blobs by color" })[mode])
+        say("grouping: " .. ({ quest = "one blob per objective", all = "unified blobs", color = "unified blobs by color" })[mode])
     elseif cmd == "debug" or cmd == "status" then
         ns.debugReport()
     elseif cmd == "color" or cmd == "colour" then

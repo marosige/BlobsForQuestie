@@ -202,7 +202,7 @@ local function buildPanel()
         end
     end
 
-    -- 5: grouping: one blob per quest -> one unified blob -> one unified blob per color
+    -- 5: grouping: one blob per objective -> one unified blob -> one unified blob per color
     do
         local b = CreateFrame("Button", nil, f)
         b:SetSize(20, 20)
@@ -212,7 +212,7 @@ local function buildPanel()
         one:SetTexture(ICONS .. "blobwide.png")
         one:SetSize(24, 14)
         one:SetPoint("CENTER")
-        local two = {}                                   -- per quest: two small blobs
+        local two = {}                                   -- per objective: two small blobs
         for k = 1, 2 do
             two[k] = b:CreateTexture(nil, "ARTWORK")
             two[k]:SetTexture(ICONS .. "blob.png")
@@ -221,7 +221,7 @@ local function buildPanel()
         end
         local NEXT = { quest = "all", all = "color", color = "quest" }
         local PREV = { quest = "color", all = "quest", color = "all" }
-        local NAMES = { quest = "one blob per quest", all = "unified blobs", color = "unified blobs by color" }
+        local NAMES = { quest = "one blob per objective", all = "unified blobs", color = "unified blobs by color" }
         b:RegisterForClicks("LeftButtonUp", "RightButtonUp")
         b:SetScript("OnClick", function(_, button)
             ns.DB.groupMode = (stepOf(button) < 0 and PREV or NEXT)[ns.DB.groupMode] or "all"
