@@ -67,6 +67,10 @@ local function ensureMark(f)
     m.badge = m:CreateTexture(nil, "OVERLAY", nil, 3)
     m.badge:SetTexture(ICONS .. "forever.png")
     m.badge:SetPoint("TOPRIGHT", m, "TOPRIGHT", 0, 0)
+    for _, t in ipairs({ m.line, m.glyph, m.over, m.badge }) do   -- like Questie's own picture: no snapping to whole pixels
+        if t.SetSnapToPixelGrid then t:SetSnapToPixelGrid(false) end
+        if t.SetTexelSnappingBias then t:SetTexelSnappingBias(0) end
+    end
     f._qqMark = m
     -- Questie sizes its icons with the map's zoom and its own settings: the pictures follow
     if f.HookScript then f:HookScript("OnSizeChanged", function(self) if self._qqMark and self._qqMark:IsShown() then layout(self) end end) end

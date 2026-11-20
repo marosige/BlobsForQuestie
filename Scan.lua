@@ -443,7 +443,8 @@ ns.forgetHooks[#ns.forgetHooks + 1] = function(f) miniHide(f, false) end
 local function ensureMini()
     if mini then return mini end
     mini = CreateFrame("Frame", "BlobsForQuestieMinimap", Minimap)
-    mini:SetAllPoints(Minimap)
+    mini:SetPoint("CENTER", Minimap, "CENTER", 0, 0)   -- slides with the player (see MinimapSlide)
+    mini:SetSize(Minimap:GetWidth(), Minimap:GetHeight())
     mini:SetFrameLevel((Minimap:GetFrameLevel() or 1))   -- below the icons (they are children of the minimap one level up)
     mini:EnableMouse(false)
     mini.tex, mini.lines, mini.lmx, mini.lmy = {}, {}, {}, {}
@@ -451,7 +452,7 @@ local function ensureMini()
         local m = mini:CreateMaskTexture()
         if type(m) == "table" and m.SetTexture then
             m:SetTexture("Interface\\CharacterFrame\\TempPortraitAlphaMask", "CLAMPTOBLACKADDITIVE", "CLAMPTOBLACKADDITIVE")
-            m:SetAllPoints(mini)
+            m:SetAllPoints(Minimap)   -- the round clip stays on the minimap while the blobs slide under it
             mini.mask = m
         end
     end
@@ -467,10 +468,14 @@ local function startMinimap()
     local drv = CreateFrame("Frame")
     QQ._miniDriver = drv
     drv:SetScript("OnUpdate", function(self, elapsed)
+        -- every frame: slide the drawn blobs with the player (cheap); now and then: work out what is on the minimap
+        local ok, err = pcall(QQ.MinimapSlide, QQ)
+        if not ok then reportError("minimap: " .. tostring(err)) end
         self._t = (self._t or 0) + elapsed
-        if self._t < 0.15 then return end
+        if self._t < 0.15 and not QQ._miniNow then return end
         self._t = 0
-        local ok, err = pcall(QQ.MinimapTick, QQ)
+        QQ._miniNow = nil
+        ok, err = pcall(QQ.MinimapTick, QQ)
         if not ok then reportError("minimap: " .. tostring(err)) end
     end)
     QQ:SyncMini()
@@ -487,6 +492,19 @@ function QQ:SyncMini()
         pcall(QQ.MinimapTick, QQ)
         drv:Hide()
     end
+end
+
+-- The blobs are drawn once for a reference position of the player; while he walks they slide as a whole, which
+-- is smooth, and only when they have slid far (or something changed) are they built again.
+function QQ:MinimapSlide()
+    local m = mini
+    if not (m and m:IsShown() and m._rx and not m._rot and ns.HBD) then return end
+    local px, py, pinst = ns.HBD:GetPlayerWorldPosition()
+    if not px or pinst ~= m._inst or miniRadius() ~= m._radius then QQ._miniNow = true; return end
+    local sx, sy = (px - m._rx) / m._radius * m._halfW, (py - m._ry) / m._radius * m._halfH
+    if sx > m._slide or sx < -m._slide or sy > m._slide or sy < -m._slide then QQ._miniNow = true end
+    m:ClearAllPoints()
+    m:SetPoint("CENTER", Minimap, "CENTER", sx, -sy)
 end
 
 function QQ:MinimapTick()
@@ -532,6 +550,17 @@ function QQ:MinimapTick()
     local groups, sig = {}, {}
     local Rpx = miniBlobRadius(radius, halfW * 2, miniList[1] and miniList[1].UiMapID)
     local stepYd = max(Rpx * 0.8, 3) / halfW * radius   -- patrol sample spacing in yards
+    -- Reference position: the blobs are drawn for it and slide as the player moves away from it. It stays while the
+    -- slide is small (and the zoom, instance and rotation stay); the icons within reach of the slide are included.
+    local m = ensureMini()
+    local slide = max(6, halfW * 0.12)   -- pixels the blobs may slide before they are built again
+    local refx, refy = px, py
+    if not rot and m._rx and not m._rot and m._radius == radius and m._inst == pinst then
+        local sx, sy = (px - m._rx) / radius * halfW, (py - m._ry) / radius * halfH
+        if sx <= slide and sx >= -slide and sy <= slide and sy >= -slide then refx, refy = m._rx, m._ry end
+    end
+    local reach = radius * (1 + (Rpx + slide) / halfW)   -- yards from the reference position
+    local win = Rpx + slide
     for _, f in ipairs(miniList) do
         local d = f.data
         if f.miniMapIcon and d then
@@ -541,9 +570,10 @@ function QQ:MinimapTick()
             if wx and inst == pinst then
                 local dx, dy = px - wx, py - wy
                 dist = sqrt(dx * dx + dy * dy)
+                dx, dy = refx - wx, refy - wy   -- the picture is drawn for the reference position
                 if rot then dx, dy = dx * cs - dy * sn, dx * sn + dy * cs end
                 mx, my = halfW + dx / radius * halfW, halfH + dy / radius * halfH   -- pixels from the minimap's top left
-                onMap = dist <= radius * 1.15
+                onMap = dx * dx + dy * dy <= reach * reach
             end
             if d.Type == "available" then
                 hide = availForced(d) or dungeonHide(f) or (ns.DB.hideFarAvail and (dist == nil or dist > nearY))
@@ -584,10 +614,10 @@ function QQ:MinimapTick()
                                         miniPatrolCache[path] = cc
                                     end
                                     for _, e in ipairs(cc.wlist) do
-                                        local ex, ey = px - e[1], py - e[2]
+                                        local ex, ey = refx - e[1], refy - e[2]
                                         if rot then ex, ey = ex * cs - ey * sn, ex * sn + ey * cs end
                                         local qx, qy = halfW + ex / radius * halfW, halfH + ey / radius * halfH
-                                        if qx > -Rpx and qx < halfW * 2 + Rpx and qy > -Rpx and qy < halfH * 2 + Rpx then
+                                        if qx > -win and qx < halfW * 2 + win and qy > -win and qy < halfH * 2 + win then
                                             g.pts[#g.pts + 1] = { qx, qy, classOf(d.Icon), step }
                                             sig[#sig + 1] = floor(qx) .. "," .. floor(qy) .. gk
                                         end
@@ -602,22 +632,29 @@ function QQ:MinimapTick()
         end
     end
     -- redraw only when something moved
-    local m = ensureMini()
     table.sort(sig)
     local cl = ns.DB.colorAll
     local key = table.concat(sig, ";") .. "|" .. ns.DB.colorMode .. "|" .. ns.DB.groupMode .. "|" .. ns.DB.blobAlpha .. "|" .. floor(radius)
-        .. "|" .. format("%.3f%.3f%.3f", cl[1], cl[2], cl[3])
+        .. "|" .. format("%.3f%.3f%.3f", cl[1], cl[2], cl[3]) .. "|" .. format("%.2f,%.2f", refx, refy)
     for _, k in ipairs({ "kill", "loot", "other" }) do local c = ns.DB.colors[k]; key = key .. format("%.3f%.3f%.3f", c[1], c[2], c[3]) end
     if key ~= m._sig then
         m._sig = key
         local R = miniBlobRadius(radius, halfW * 2, miniList[1] and miniList[1].UiMapID)
         local list = {}
+        -- the grid lines stay where they are in the world, so the same spots give the same shape each time
+        local csz = max(R / 3, 4)
+        local phx = not rot and (halfW + refx / radius * halfW) % csz or nil
+        local phy = not rot and (halfH + refy / radius * halfH) % csz or nil
         for gk, g in pairs(groups) do
-            local G = buildGeometry(g.pts, R)
+            local G = buildGeometry(g.pts, R, phx, phy)
             for n, c in ipairs(G.comps) do list[#list + 1] = { c = c, key = "M" .. gk .. n, items = {}, near = g.near } end
         end
         local cont = S.continent
         S.continent = false   -- the zone-map rules, whatever the world map shows
+        m._rx, m._ry, m._rot, m._radius, m._inst, m._halfW, m._halfH, m._slide = refx, refy, rot, radius, pinst, halfW, halfH, slide
+        m:SetSize(halfW * 2, halfH * 2)
+        m:ClearAllPoints()
+        m:SetPoint("CENTER", Minimap, "CENTER", (px - refx) / radius * halfW, -(py - refy) / radius * halfH)
         drawBlobs(m, list, halfW * 2, halfH * 2)
         for _, b in ipairs(list) do lookBlob(m, b) end
         S.continent = cont

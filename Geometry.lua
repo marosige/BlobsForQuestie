@@ -357,7 +357,9 @@ local function buildFill(comps, compOf, inside, edgeList, pts, R, x0, y0, cs, ni
 end
 
 -- pts = { {x, y, kind, step}, ... } in canvas pixels
-local function buildGeometry(pts, R)
+-- phx, phy (optional): where the grid lines of the field lie, modulo the cell size. With them the cells sit at
+-- the same places whichever points are there, so a blob built again for the same spots has the same shape.
+local function buildGeometry(pts, R, phx, phy)
     local cs = max(R / 3, 4)
     local minx, miny, maxx, maxy = 1e9, 1e9, -1e9, -1e9
     for _, p in ipairs(pts) do
@@ -392,6 +394,10 @@ local function buildGeometry(pts, R)
         end
     end
     local x0, y0 = minx - R, miny - R
+    if phx and phy then
+        x0 = floor((x0 - phx) / cs) * cs + phx
+        y0 = floor((y0 - phy) / cs) * cs + phy
+    end
     local ni = ceil((maxx + R - x0) / cs) + 1
     local nj = ceil((maxy + R - y0) / cs) + 1
 
