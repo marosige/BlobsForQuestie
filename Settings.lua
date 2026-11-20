@@ -294,8 +294,8 @@ local function buildGUI()
 
     makeHeader(p, X, -PH - 70, "Blob color")
     makeSegmented(p, X, -PH - 92, CW, {
-        { "level", "By quest level", "Each blob takes the color of its quest's difficulty, like quest titles in the game: grey is easy, red is very hard." },
         { "single", "One color", "All blobs are drawn in one color of your choice." },
+        { "level", "By quest level", "Each blob takes the color of its quest's difficulty, like quest titles in the game: grey is easy, red is very hard." },
         { "kind", "By objective", "Each kind of objective has its own color: kill, loot and everything else. Loot can also show its drop rate." },
     }, function() return ns.DB.colorMode end, function(v) ns.DB.colorMode = v; redraw() end)
 
@@ -349,8 +349,8 @@ local function buildGUI()
     makeHeader(p, X, -PH - 192, "Blob grouping")
     makeSegmented(p, X, -PH - 214, CW, {
         { "quest", "One blob per objective", "Every quest objective gets a blob of its own: a quest that asks for several things (say wolves and their pelts) has one blob for each. Where objectives are close, their blobs overlap." },
-        { "all", "Unified", "Objectives close to each other share one blob. Each part of it keeps its own color, blending into the next." },
         { "color", "Unified by color", "Objectives of the same color share one blob, so every color forms blobs of its own." },
+        { "all", "Unified", "Objectives close to each other share one blob. Each part of it keeps its own color, blending into the next." },
     }, function() return ns.DB.groupMode end, function(v) ns.DB.groupMode = v end)
     makeHeader(p, X, -PH - 264, "Blobs on maps")
     check(p, -PH - 286, "blobsWorld", "Blobs on continent and world maps",

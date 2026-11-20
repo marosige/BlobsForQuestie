@@ -151,7 +151,7 @@ local function slash(msg)
         ns.DB.hideItemStarts = not on
         say("quests started by a drop: " .. (on and "shown" or "hidden"))
     elseif cmd == "group" or cmd == "grouping" then
-        local MODES = { "quest", "all", "color" }
+        local MODES = { "quest", "color", "all" }
         local mode = ({ quest = "quest", objective = "quest", all = "all", unified = "all", color = "color", colour = "color" })[arg]
         if not mode then
             local nxt = 1
