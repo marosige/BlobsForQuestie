@@ -208,7 +208,9 @@ local function buildPanel()
         end
     end
 
-    -- 6: grouping: none (a blob per objective) -> all together (one blob) -> by color (one blob per color)
+    -- 6: grouping: none (a blob per objective) -> by color (one blob per color) -> all together (one blob).
+    -- Next to the color modes (one color, by quest level, by objective) this puts "by quest level + all together" and
+    -- "by objective + by color" one step apart in opposite directions: one click on each button switches between them.
     do
         local b = CreateFrame("Button", nil, f)
         b:SetSize(20, 20)
@@ -225,8 +227,8 @@ local function buildPanel()
             two[k]:SetSize(11, 14)
             two[k]:SetPoint("CENTER", (k == 1 and -6 or 6), 0)
         end
-        local NEXT = { quest = "all", all = "color", color = "quest" }
-        local PREV = { quest = "color", all = "quest", color = "all" }
+        local NEXT = { quest = "color", color = "all", all = "quest" }
+        local PREV = { quest = "all", color = "quest", all = "color" }
         local NAMES = { quest = "none", all = "all together", color = "by color" }
         b:RegisterForClicks("LeftButtonUp", "RightButtonUp")
         b:SetScript("OnClick", function(_, button)
