@@ -168,7 +168,7 @@ local function slash(msg)
     elseif cmd == "debug" or cmd == "status" then
         ns.debugReport()
     elseif cmd == "color" or cmd == "colour" then
-        local MODES = { "single", "level", "kind" }
+        local MODES = { "single", "kind", "level" }
         local ALIAS = { one = "single", single = "single", level = "level", kind = "kind", objective = "kind" }
         local mode = ALIAS[arg]
         if not mode then

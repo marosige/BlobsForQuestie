@@ -295,8 +295,8 @@ local function buildGUI()
     makeHeader(p, X, -PH - 70, "Blob color")
     makeSegmented(p, X, -PH - 92, CW, {
         { "single", "One color", "All blobs are drawn in one color of your choice." },
-        { "level", "By quest level", "Each blob takes the color of its quest's difficulty, like quest titles in the game: grey is easy, red is very hard." },
         { "kind", "By objective", "Each kind of objective has its own color: kill, loot and everything else. Loot can also show its drop rate." },
+        { "level", "By quest level", "Each blob takes the color of its quest's difficulty, like quest titles in the game: grey is easy, red is very hard." },
     }, function() return ns.DB.colorMode end, function(v) ns.DB.colorMode = v; redraw() end)
 
     -- the colour pickers of the selected mode

@@ -147,7 +147,7 @@ local function buildPanel()
     -- 5: blob colour, steps through the three modes. Its picture is always a blob in the mode's colours, with a
     -- sign for what they mean: none (one color), a ! (by quest level), Questie's loot bag (by objective)
     do
-        local MODES = { "single", "level", "kind" }
+        local MODES = { "single", "kind", "level" }
         local NAMES = { single = "One color", level = "By quest level", kind = "By objective" }
         local b = CreateFrame("Button", nil, f)
         b:SetSize(20, 20)
@@ -209,8 +209,8 @@ local function buildPanel()
     end
 
     -- 6: grouping: none (a blob per objective) -> by color (one blob per color) -> all together (one blob).
-    -- Next to the color modes (one color, by quest level, by objective) this puts "by quest level + all together" and
-    -- "by objective + by color" one step apart in opposite directions: one click on each button switches between them.
+    -- With the color modes in the order one color, by objective, by quest level, "by objective + by color" and
+    -- "by quest level + all together" are one step apart on both buttons: one click on each switches between them.
     do
         local b = CreateFrame("Button", nil, f)
         b:SetSize(20, 20)
