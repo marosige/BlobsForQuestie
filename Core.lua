@@ -444,6 +444,25 @@ local function applyHide(f, hide, fresh)
     end
 end
 
+-- Opens a quest's details in the quest log without the map moving: the game's own function also switches the
+-- world map to the zone (or continent) the quest belongs to, but the map should stay where the player is looking.
+local function openDetailsKeepMap(questId)
+    if not QuestMapFrame_OpenToQuestDetails then return end
+    local wm = WorldMapFrame
+    local prev = wm and wm.GetMapID and wm:GetMapID()
+    QQ.detailsFromClick = questId   -- the turn-in move (see Layer) is for details opened in the log itself
+    pcall(QuestMapFrame_OpenToQuestDetails, questId)
+    if not (prev and wm.SetMapID) then return end
+    local function back()
+        if wm:GetMapID() ~= prev then wm:SetMapID(prev) end
+    end
+    back()
+    if C_Timer and C_Timer.After then   -- the game may move the map a moment later
+        C_Timer.After(0, back)
+        C_Timer.After(0.15, back)
+    end
+end
+
 -- Questie recycles its icon frames: Unload hands a frame back to its pool, and the pool gives the next icon
 -- drawn on it a new OnShow script and its alpha back. What we kept on the frame belonged to the old icon.
 local forgetHooks = {}   -- other files forget what they keep per frame here (the minimap)
@@ -485,7 +504,7 @@ local function hookFrame(f)
                 if d.Type == "available" or d.Type == "manual" or not d.QuestData then return end
                 if ChatEdit_GetActiveWindow and ChatEdit_GetActiveWindow() then return end   -- Questie links the quest there
                 if InCombatLockdown and InCombatLockdown() then return end
-                if QuestMapFrame_OpenToQuestDetails then pcall(QuestMapFrame_OpenToQuestDetails, d.Id) end
+                openDetailsKeepMap(d.Id)
             end)
         end
         hookUnload(f)

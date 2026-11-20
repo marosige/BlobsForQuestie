@@ -545,7 +545,12 @@ local function updateQuestFocus()
     local dq = ns.DB.logDetails and openDetailsQuest() or nil
     if dq ~= qstate.dq then
         qstate.dq = dq
-        if dq then showTurnIn(dq) end
+        if dq and dq == QQ.detailsFromClick then
+            QQ.detailsFromClick = nil   -- opened by Shift + click on an icon: the map stays where it is
+        elseif dq then
+            showTurnIn(dq)
+        end
+        if not dq then QQ.detailsFromClick = nil end
     end
 end
 
