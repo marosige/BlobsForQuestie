@@ -388,6 +388,22 @@ local mini
 local miniList, miniListT = {}, -99
 local miniHidden = {}   -- minimap icons hidden by us
 
+-- What the blobs depend on is boiled down to one number per tick (a sum, so the order of the icons does not
+-- matter): no strings to build and sort for every icon, every tick.
+local gkHash = {}
+local function groupHash(gk)
+    local v = gkHash[gk]
+    if not v then
+        v = 7
+        for i = 1, #gk do v = (v * 31 + gk:byte(i)) % 2147483647 end
+        gkHash[gk] = v
+    end
+    return v
+end
+local function spotHash(x, y, gh)
+    return (floor(x) * 73856093 + floor(y) * 19349663 + gh * 83492791) % 2147483647
+end
+
 local function miniRadius()
     if C_Minimap and C_Minimap.GetViewRadius then
         local v = C_Minimap.GetViewRadius()
@@ -547,7 +563,7 @@ function QQ:MinimapTick()
     else nearY = -1 end
     local sn, cs = math.sin(facing), math.cos(facing)
     local plevel = UnitLevel("player") or 1
-    local groups, sig = {}, {}
+    local groups, sigSum, sigN = {}, 0, 0
     local Rpx = miniBlobRadius(radius, halfW * 2, miniList[1] and miniList[1].UiMapID)
     local stepYd = max(Rpx * 0.8, 3) / halfW * radius   -- patrol sample spacing in yards
     -- Reference position: the blobs are drawn for it and slide as the player moves away from it. It stays while the
@@ -592,7 +608,8 @@ function QQ:MinimapTick()
                         local g = groups[gk]
                         if not g then g = { key = gk, near = near and ns.DB.groupMode == "quest", pts = {}, items = {} }; groups[gk] = g end
                         g.pts[#g.pts + 1] = { mx, my, classOf(d.Icon), step }
-                        sig[#sig + 1] = floor(mx) .. "," .. floor(my) .. gk .. (near and "n" or "")
+                        local gh = groupHash(gk)   -- gk holds the near / far split where it matters ("one blob per objective")
+                        sigSum, sigN = (sigSum + spotHash(mx, my, gh)) % 2147483647, sigN + 1
                         -- the whole patrol route belongs to the blob
                         local paths = d.waypointPaths
                         if type(paths) == "table" then
@@ -619,7 +636,7 @@ function QQ:MinimapTick()
                                         local qx, qy = halfW + ex / radius * halfW, halfH + ey / radius * halfH
                                         if qx > -win and qx < halfW * 2 + win and qy > -win and qy < halfH * 2 + win then
                                             g.pts[#g.pts + 1] = { qx, qy, classOf(d.Icon), step }
-                                            sig[#sig + 1] = floor(qx) .. "," .. floor(qy) .. gk
+                                            sigSum, sigN = (sigSum + spotHash(qx, qy, gh)) % 2147483647, sigN + 1
                                         end
                                     end
                                 end
@@ -632,9 +649,8 @@ function QQ:MinimapTick()
         end
     end
     -- redraw only when something moved
-    table.sort(sig)
     local cl = ns.DB.colorAll
-    local key = table.concat(sig, ";") .. "|" .. ns.DB.colorMode .. "|" .. ns.DB.groupMode .. "|" .. ns.DB.blobAlpha .. "|" .. floor(radius)
+    local key = sigSum .. ":" .. sigN .. "|" .. ns.DB.colorMode .. "|" .. ns.DB.groupMode .. "|" .. ns.DB.blobAlpha .. "|" .. floor(radius)
         .. "|" .. format("%.3f%.3f%.3f", cl[1], cl[2], cl[3]) .. "|" .. format("%.2f,%.2f", refx, refy)
     for _, k in ipairs({ "kill", "loot", "other" }) do local c = ns.DB.colors[k]; key = key .. format("%.3f%.3f%.3f", c[1], c[2], c[3]) end
     if key ~= m._sig then
