@@ -238,8 +238,10 @@ local function drawBlobs(f, list, W, H)
         local c = blob.c
         c.col = colorOf(c.kinds)
         c.t1 = ti + 1
-        local graded = (ns.DB.colorMode ~= "single" or c.heat) and c.hrects
-        for _, r in ipairs(graded or c.rects) do
+        -- A blob small enough to have no whole cell inside (a lone objective) has only bent edge pieces: it is
+        -- still a coloured blob, so "graded" must not depend on the rectangles.
+        local graded = (ns.DB.colorMode ~= "single" or c.heat) and (c.hrects or c.hpieces) and true or false
+        for _, r in ipairs(graded and (c.hrects or {}) or c.rects) do
             local x1, y1 = snap(max(r[1], 0)), snap(max(r[2], 0))
             local x2, y2 = snap(min(r[3], W)), snap(min(r[4], H))
             if x2 > x1 and y2 > y1 then

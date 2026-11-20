@@ -337,7 +337,15 @@ local function buildFill(comps, compOf, inside, edgeList, pts, R, x0, y0, cs, ni
             open = nowOpen
         end
     end
-    local pieces = edgePieces(edgeList, nj, function(i, j) return mixAt(i, j * FILL_SUB) end)
+    -- the corner of an edge cell can lie where no point reaches: take the colour of the corner next to it
+    local NEIGHBOURS = { { 0, 0 }, { 1, 0 }, { 0, 1 }, { 1, 1 }, { -1, 0 }, { 0, -1 } }
+    local pieces = edgePieces(edgeList, nj, function(i, j)
+        for _, d in ipairs(NEIGHBOURS) do
+            local m = mixAt(i + d[1], (j + d[2]) * FILL_SUB)
+            if m then return m end
+        end
+        return nil
+    end)
     for _, q in ipairs(pieces) do
         local c = comps[compOf[q.k] or 0]
         if c then
