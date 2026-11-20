@@ -9,7 +9,7 @@ An unofficial addon for **Questie** that declutters the map: far quest objective
 - **Blobs instead of far icons:** quest objectives far from you turn into soft blobs that follow their spawn points, so the map stays readable with a full quest log. Walking mobs include their whole patrol route.
 - **Questie's own icons where it matters:** near your character and around the mouse pointer you see the normal Questie icons, with Questie's own tooltips. Both distances are yours to set. You can also show all icons everywhere.
 - **Colors:** blobs can be colored by quest level (like quest titles in the game), by objective (kill blue, other white, loot) or all in one color. Loot is shaded by drop rate like a traffic light (green good, yellow mid, red poor), so you see where farming is slow. All colors can be changed.
-- **Grouping:** one blob per objective, unified blobs, or unified blobs by color.
+- **Grouping:** none (every objective its own blob), all together (close objectives share one blob), or by color (one blob per color).
 - **Continent and world map:** one blob per zone.
 - **Minimap:** optional blobs on the minimap too.
 - **Available quests:** show them everywhere or only nearby, and leave out quests started by a dropped item, PvP, repeatable and dungeon quests.
@@ -32,7 +32,7 @@ Requires WoW Classic Forever and Questie. Copy the `BlobsForQuestie` folder into
   - `/blob drop [on|off]`: quests started by a dropped item
   - `/blob zones [on|off]`: Questie icons of neighbouring zones on a zone map
   - `/blob color [one|level|kind]`: how blobs are colored (no word: next)
-  - `/blob group [objective|all|color]`: how blobs are grouped (no word: next)
+  - `/blob group [none|all|color]`: how blobs are grouped (no word: next)
   - `/blob debug`: what the addon found (Questie, map libraries, last scan). Paste it when reporting a problem.
 
 ## Files

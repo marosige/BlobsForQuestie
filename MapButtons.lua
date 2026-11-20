@@ -208,7 +208,7 @@ local function buildPanel()
         end
     end
 
-    -- 6: grouping: one blob per objective -> one unified blob -> one unified blob per color
+    -- 6: grouping: none (a blob per objective) -> all together (one blob) -> by color (one blob per color)
     do
         local b = CreateFrame("Button", nil, f)
         b:SetSize(20, 20)
@@ -227,7 +227,7 @@ local function buildPanel()
         end
         local NEXT = { quest = "all", all = "color", color = "quest" }
         local PREV = { quest = "color", all = "quest", color = "all" }
-        local NAMES = { quest = "one blob per objective", all = "unified blobs", color = "unified blobs by color" }
+        local NAMES = { quest = "none", all = "all together", color = "by color" }
         b:RegisterForClicks("LeftButtonUp", "RightButtonUp")
         b:SetScript("OnClick", function(_, button)
             ns.DB.groupMode = (stepOf(button) < 0 and PREV or NEXT)[ns.DB.groupMode] or "all"
