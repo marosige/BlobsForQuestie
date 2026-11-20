@@ -156,7 +156,7 @@ local function slash(msg)
         ns.DB.hideOtherZones = not on
         say("neighbouring zones on a zone map: " .. (on and "shown" or "hidden"))
     elseif cmd == "group" or cmd == "grouping" then
-        local MODES = { "quest", "color", "all" }
+        local MODES = { "quest", "all", "color" }
         local mode = ({ quest = "quest", objective = "quest", all = "all", unified = "all", color = "color", colour = "color" })[arg]
         if not mode then
             local nxt = 1
